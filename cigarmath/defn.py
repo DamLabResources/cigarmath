@@ -46,6 +46,9 @@ CIGAR_VALID_CHRS = set(str(n) for n in range(10)).union(CIGAR_SET)
 
 CIGAR2BAM = {nt.Op:i for i, nt in enumerate(NTS)}
 
+CONSUMES_REFERENCE = {bam_num for bam_num, cigar_letter in enumerate(NTS) if cigar_letter.consumes_ref}
+CONSUMES_QUERY = {bam_num for bam_num, cigar_letter in enumerate(NTS) if cigar_letter.consumes_query}
+
 def cigarstring_to_cigartuples(cigarstring):
     """Create cigartuples from cigarstring"""
     if cigarstring is None:
@@ -60,7 +63,7 @@ def cigarstring_to_cigartuples(cigarstring):
             pta = idx + 1
     return cigartuples
 
-def cigartuples2cigarstring(cigartuples, sep=''):
+def cigartuples_to_cigarstring(cigartuples, sep=''):
     """Get cigarstring from cigartuples"""
     return sep.join(f'{cnt}{CIGAR_HDRS[op]}' for op, cnt in cigartuples)
 
@@ -75,6 +78,7 @@ BAM_CPAD        = 6  # P
 BAM_CEQUAL      = 7  # =
 BAM_CDIFF       = 8  # X
 BAM_CBACK       = 9  # B
+
 
 
 # Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved

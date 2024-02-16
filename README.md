@@ -2,13 +2,24 @@
 
 This is a lightweight library for performing basic mathematical operations on cigar-strings and cigar-tuples.
 
-Features
+## Features
 --------
 
 * Handle clipping
 * Find overlapping blocks
 * Detect deletion locations
 * Simplify `X=` cigar-tuples.
+
+
+## Basic usage 
+
+```
+
+
+```
+
+
+
 
 Credits
 -------
