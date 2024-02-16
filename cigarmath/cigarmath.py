@@ -14,32 +14,18 @@ from cigarmath.defn import (
     CIGAR_HDRS,
     CIGAR2BAM,
     CONSUMES_REFERENCE,
-    CONSUMES_QUERY
+    CONSUMES_QUERY,
 )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def reference_deletion_blocks(cigartuples, reference_start=0, min_size=1):
     """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size
-    
+
     POS0  000000000011111111112222222222
     POS1  012345678901234567890123456789
-    
-    CGS      MMMMDDDDDDMMMMDDDDDDMMMM 
-    
+
+    CGS      MMMMDDDDDDMMMMDDDDDDMMMM
+
     >>> reference_deletion_blocks(cigartuples, reference_start=3)
     (7, 12)
     (17, 22)
@@ -54,12 +40,12 @@ def reference_deletion_blocks(cigartuples, reference_start=0, min_size=1):
 
 def simplify_blocks(cigartuples, collapse=True):
     """Replace extended cigars (= and X) with M.
-    
+
     POS  0123456789012345
     REF     AAAAGACCCCC
     QRY     AAAAACCGGCC
     CGS     ====xx=xx==
-    
+
     >>>> simplify_blocks(cigartuples)
     [(0, 11)]
     """
@@ -104,5 +90,5 @@ def collapse_adjacent_blocks(cigartuples):
     # at the end of the loop, yield what's left
     yield last_op, last_sz
 
-    
+
 # Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved

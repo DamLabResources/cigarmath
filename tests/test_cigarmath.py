@@ -10,6 +10,7 @@ from cigarmath import defn
 
 from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
 
+
 def check_cigartuples(guess, correct):
     "Compare two lists of cigartuples"
     assert len(guess) == len(correct)
@@ -34,16 +35,6 @@ def test_cigarstr2tuples():
         (defn.BAM_CSOFT_CLIP, 20),
     ]
     check_cigartuples(guess, correct)
-
-
-
-
-
-
-
-
-
-
 
 
 def test_reference_deletion_blocks():
@@ -133,5 +124,3 @@ def test_collapse_adjacent_blocks():
         (defn.BAM_CINS, 15),
     ]
     check_cigartuples(guess, correct)
-
-

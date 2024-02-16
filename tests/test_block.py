@@ -8,42 +8,32 @@ def test_reference_block():
     ref_start = 10
 
     cigar = "30M"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (ref_start, ref_start + 30) == guess
 
     cigar = "20S30M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Soft-Clipping should not alter the reference block"
 
     cigar = "20H30M10H"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Hard-Clipping should not alter the reference block"
 
     cigar = "20S25M10I5M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Insertions should not alter the reference block"
 
     cigar = "20S25M10D5M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 40,
@@ -72,7 +62,7 @@ def test_query_block():
     cigar = "20S25M10D5M10S"
     guess = cm.query_block(cigarstr2tup(cigar))
     assert (20, 20 + 25 + 5) == guess, "Deletions should not shift the query block"
-    
+
 
 def test_block_overlap():
     "Test detecting overlapping blocks"

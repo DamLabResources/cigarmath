@@ -9,6 +9,7 @@ from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
 
 import cigarmath as cm
 
+
 def check_cigartuples(guess, correct):
     "Compare two lists of cigartuples"
     assert len(guess) == len(correct)
