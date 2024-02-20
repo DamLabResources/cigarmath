@@ -84,3 +84,38 @@ def test_block_overlap():
         assert (
             correct == guess
         ), f"Expected {correct} overlap but got {guess} for {block_b}, {block_a}"
+
+        
+def test_reference_deletion_blocks():
+    "Test detecting large deletions in cigartuples"
+
+    cigar = "30M10D20S"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = [(30, 40)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, reference_start=10))
+    correct = [(40, 50)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, min_size=20))
+    correct = []
+    assert guess == correct
+
+    cigar = "30M10N30M100D10M10I10M50N10M"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = [(30, 40), (70, 170), (190, 240)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, min_size=20))
+    correct = [(70, 170), (190, 240)]
+    assert guess == correct
+
+    # Test handles no-deletions
+    cigar = "300M"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = []
+    assert guess == correct

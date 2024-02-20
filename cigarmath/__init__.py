@@ -17,6 +17,7 @@ from .block import query_offest
 from .block import query_block
 from .block import block_overlap_length
 from .block import reference_offset
+from .block import reference_deletion_blocks
 
 from .inference import inferred_query_sequence_length
 from .inference import inferred_reference_length
