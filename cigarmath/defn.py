@@ -64,7 +64,7 @@ CONSUMES_QUERY = {
 }
 
 
-def cigarstring_to_cigartuples(cigarstring):
+def cigarstr2tup(cigarstring):
     """Create cigartuples from cigarstring"""
     if cigarstring is None:
         return None
@@ -79,7 +79,7 @@ def cigarstring_to_cigartuples(cigarstring):
     return cigartuples
 
 
-def cigartuples_to_cigarstring(cigartuples, sep=""):
+def cigartup2str(cigartuples, sep=""):
     """Get cigarstring from cigartuples"""
     return sep.join(f"{cnt}{CIGAR_HDRS[op]}" for op, cnt in cigartuples)
 

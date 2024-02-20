@@ -5,7 +5,7 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
 
 import cigarmath as cm
 from cigarmath import defn

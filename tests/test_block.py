@@ -1,5 +1,5 @@
 import cigarmath as cm
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
 
 
 def test_reference_block():

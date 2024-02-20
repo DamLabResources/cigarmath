@@ -8,7 +8,7 @@ __author__ = "Will Dampier, PhD"
 from cigarmath import cigarmath
 from cigarmath import defn
 
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
 
 
 def check_cigartuples(guess, correct):

@@ -23,3 +23,6 @@ from .inference import inferred_query_sequence_length
 from .inference import inferred_reference_length
 
 from . import plotting
+
+from .defn import cigarstr2tup
+from .defn import cigartup2str
