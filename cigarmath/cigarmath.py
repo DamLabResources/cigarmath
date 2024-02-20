@@ -18,24 +18,7 @@ from cigarmath.defn import (
 )
 
 
-def reference_deletion_blocks(cigartuples, reference_start=0, min_size=1):
-    """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size
 
-    POS0  000000000011111111112222222222
-    POS1  012345678901234567890123456789
-
-    CGS      MMMMDDDDDDMMMMDDDDDDMMMM
-
-    >>> reference_deletion_blocks(cigartuples, reference_start=3)
-    (7, 12)
-    (17, 22)
-    """
-
-    del_ops = {BAM_CDEL, BAM_CREF_SKIP}
-    for op, sz in cigartuples:
-        if (op in del_ops) and (sz >= min_size):
-            yield reference_start, reference_start + sz
-        reference_start += (op in CONSUMES_REFERENCE) * sz
 
 
 def simplify_blocks(cigartuples, collapse=True):

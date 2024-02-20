@@ -21,3 +21,5 @@ from .block import reference_deletion_blocks
 
 from .inference import inferred_query_sequence_length
 from .inference import inferred_reference_length
+
+from . import plotting
