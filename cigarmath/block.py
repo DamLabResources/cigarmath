@@ -125,6 +125,31 @@ def block_overlap_length(block_a, block_b):
     return min(block_a[1], block_b[1]) - max(block_a[0], block_b[0])
 
 
+def reference_mapping_blocks(cigartuples, reference_start=0, deletion_split=10):
+    """Yield (reference_start, reference_stop) blocks of mapped sites split by deletions.
+    
+    POS0  000000000011111111112222222222
+    POS1  012345678901234567890123456789
+
+    CGS      MMMMMMMDDDMMMMDDDDDDMMMM
+    
+    reference_mapping_blocks(cigartuples, reference_start=3, deletion_split=5)
+    (3, 16)
+    (22, 26)
+    """
+    
+    del_ops = {BAM_CDEL, BAM_CREF_SKIP}
+    
+    left, right = reference_start, reference_start
+    for op, sz in cigartuples:
+        if (op in del_ops) and (sz >= deletion_split):
+            yield (left, right)
+            left = right + sz
+        right += sz * (op in CONSUMES_REFERENCE)
+        
+    yield left, right
+
+
 def reference_deletion_blocks(cigartuples, reference_start=0, min_size=1):
     """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size
 

@@ -11,6 +11,7 @@ def test_reference_block():
     guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (ref_start, ref_start + 30) == guess
 
+    
     cigar = "20S30M10S"
     guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
@@ -119,3 +120,19 @@ def test_reference_deletion_blocks():
     guess = list(cm.reference_deletion_blocks(cigartups))
     correct = []
     assert guess == correct
+    
+    
+def test_reference_mapping_blocks():
+    
+    cigar = '6M3D4M6D4M'
+    cigartups = cigarstr2tup(cigar)
+    blocks = list(cm.reference_mapping_blocks(cigartups, reference_start=3, deletion_split=5))
+    
+    assert blocks == [(3, 16), (22, 26)]
+    
+    
+    cigar = '6M3D4M6D4M'
+    cigartups = cigarstr2tup(cigar)
+    blocks = list(cm.reference_mapping_blocks(cigartups, reference_start=3, deletion_split=10))
+    
+    assert blocks == [(3, 26)]
