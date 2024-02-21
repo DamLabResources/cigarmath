@@ -2,16 +2,17 @@ import cigarmath as cm
 
 def test_segments_to_binary():
     
-    cigar, start = cm.cigarstr2tup("30M"), 30
-    guess = cm.plotting.segments_to_binary([cigar], [start], max_genome_size = 100)
+    alns = [(30, cm.cigarstr2tup("30M"))]
+    guess = cm.plotting.segments_to_binary(alns, max_genome_size = 100)
     assert guess[:30].sum() == 0
     assert guess[30:60].sum() == 30
     assert guess[60:].sum() == 0
     
+    alns = [(10, cm.cigarstr2tup("20M")),
+            (50, cm.cigarstr2tup("20M"))
+           ]
     
-    cigars = [cm.cigarstr2tup("20M")]*2
-    starts = [10, 50]
-    guess = cm.plotting.segments_to_binary(cigars, starts, max_genome_size = 100)
+    guess = cm.plotting.segments_to_binary(alns, max_genome_size = 100)
     
     assert guess[:10].sum() == 0
     assert guess[10:30].sum() == 20
@@ -21,10 +22,9 @@ def test_segments_to_binary():
     
     assert guess[70:].sum() == 0
     
-    
-    cigars = [cm.cigarstr2tup("20M10D5M")]*2
-    starts = [10, 50]
-    guess = cm.plotting.segments_to_binary(cigars, starts, max_genome_size = 100, deletion_size=1)
+    alns = [(10, cm.cigarstr2tup("20M10D5M")),
+            (50, cm.cigarstr2tup("20M10D5M"))]
+    guess = cm.plotting.segments_to_binary(alns, max_genome_size = 100, deletion_size=1)
     
     assert guess[:10].sum() == 0
     assert guess[10:30].sum() == 20

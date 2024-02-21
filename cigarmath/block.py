@@ -133,7 +133,7 @@ def reference_mapping_blocks(cigartuples, reference_start=0, deletion_split=10):
 
     CGS      MMMMMMMDDDMMMMDDDDDDMMMM
     
-    reference_mapping_blocks(cigartuples, reference_start=3, deletion_split=5)
+    >> reference_mapping_blocks(cigartuples, reference_start=3, deletion_split=5)
     (3, 16)
     (22, 26)
     """
