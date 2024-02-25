@@ -31,3 +31,4 @@ from . import plotting
 from . import io
 
 from .plotting.binary_map import segments_to_binary
+from .plotting.aligned_pairs import cigartuples2pairs
