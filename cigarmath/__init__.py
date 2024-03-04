@@ -26,9 +26,7 @@ from .inference import inferred_reference_length
 from .defn import cigarstr2tup
 from .defn import cigartup2str
 
-
-from . import plotting
 from . import io
 
-from .plotting.binary_map import segments_to_binary
-from .plotting.aligned_pairs import cigartuples2pairs
+from .conversions import segments_to_binary
+from .conversions import cigartuples2pairs

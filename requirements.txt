@@ -1,5 +1,2 @@
 pytest
-numpy
-matplotlib
 pysam
-tqdm

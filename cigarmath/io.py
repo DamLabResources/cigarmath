@@ -5,9 +5,11 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
+import random
 
-def segment_stream_pysam(path, mode='rt', fetch=None, progbar=False,
-                         min_mapq=0,
+
+def segment_stream_pysam(path, mode='rt', fetch=None, 
+                         min_mapq=0, downsample = None,
                          as_tuples=False):
     """
     Yield AlignedSegments from sam/bam file with pysam.
@@ -21,10 +23,9 @@ def segment_stream_pysam(path, mode='rt', fetch=None, progbar=False,
         
         if fetch:
             iterable = iterable.fetch(fetch)
-        
-        if progbar:
-            from tqdm import tqdm
-            iterable = tqdm(iterable)
+            
+        if downsample:
+            iterable = _downsample(iterable, downsample)
         
         for segment in iterable:
             if segment.mapping_quality > min_mapq:
@@ -34,3 +35,11 @@ def segment_stream_pysam(path, mode='rt', fetch=None, progbar=False,
                         yield (segment.reference_start, segment.cigartuples)
                 else:
                     yield segment
+                    
+                    
+                    
+def _downsample(stream, frac):
+    
+    for item in stream:
+        if random.random() < frac:
+            yield item
