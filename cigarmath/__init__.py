@@ -10,6 +10,8 @@ from .clipping import right_clipping
 from .clipping import declip
 from .clipping import is_hard_clipped
 from .clipping import left_clipping
+from .clipping import softclipify
+
 
 from .block import reference_offset
 from .block import reference_block
@@ -30,3 +32,8 @@ from . import io
 
 from .conversions import segments_to_binary
 from .conversions import cigartuples2pairs
+
+from .conversions import msa2cigartuples
+from .conversions import softclipify
+
+from .cigarmath import collapse_adjacent_blocks

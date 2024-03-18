@@ -13,9 +13,21 @@ from cigarmath.block import reference_mapping_blocks
 from cigarmath.clipping import left_clipping
 from cigarmath.clipping import right_clipping
 from cigarmath.clipping import declip
+from cigarmath.clipping import softclipify
+
+from cigarmath.cigarmath import collapse_adjacent_blocks
 
 from cigarmath.defn import CONSUMES_REFERENCE
 from cigarmath.defn import CONSUMES_QUERY
+from cigarmath.defn import BAM_CMATCH
+from cigarmath.defn import BAM_CINS
+from cigarmath.defn import BAM_CDEL
+from cigarmath.defn import BAM_CEQUAL
+from cigarmath.defn import BAM_CDIFF
+from cigarmath.defn import BAM_CSOFT_CLIP
+
+
+
 
 
 def segments_to_binary(alns, max_genome_size=10_000, deletion_size=50, mapping=None):
@@ -88,3 +100,90 @@ def cigartuples2pairs(cigartuples, reference_start = 0, verbose=False, clipping_
         if verbose: print('Currently', list(zip(query, reference)))
             
     return list(zip(query, reference))
+
+
+def msa2cigartuples(ref_msa, query_msa):
+    """Given a pair of multiple-sequence alignments return reference_start and cigartuples.
+    
+    REF     AAAAGACCCCCGACTAGCTAGCATGCT----ATCTAGCTAGCA
+    QRY     ----AACCCCCGAC----TAGCATGCTTTTTATCTAGCT----
+    CIGAR       MMMMMMMMMMDDDDMMMMMMMMIIIIIMMMMMMMM
+    
+    >> ref_start, cigartuples = msa2cigartuples(ref_msa, query_msa)
+    ref_start = 4
+    cigartuples = [(0, 10), (2, 4), (0, 9), (1, 4), (0, 8)]
+    """
+    
+    assert len(ref_msa) == len(query_msa)
+    
+    cigartuples = []
+    cur_op, cur_sz = None, 0
+    reference_start = None
+    offset = 0
+    query_started = False
+    
+    non_double = ((r, q) for r, q  in zip(ref_msa, query_msa) if (r!='-') | (q!='-'))
+    
+    for n, (r, q) in enumerate(non_double):
+        #print(n, r, q)
+        query_started |= q != '-'
+        # Don't start until the first non-gap query character
+        if query_started:
+            this_op = _decide_op(r, q)
+            # print(n, r, q, this_op)
+            if (cur_op is None) and (reference_start is None):
+                # First OP
+                cur_op, cur_sz = this_op, 1
+                reference_start = n
+            elif this_op == cur_op:
+                # Extend this op
+                cur_sz += 1
+            else:
+                # New op
+                cigartuples.append((cur_op, cur_sz))
+                cur_op, cur_sz = this_op, 1
+        else:
+            # print(n, r, q)
+            offset += 1
+    
+    # Add on the last op
+    cigartuples.append((cur_op, cur_sz))
+    
+    collapsed_tuples = collapse_adjacent_blocks(cigartuples)
+    softclipped_tuples, clip_offset = softclipify(cigartuples, required_mapping=1)
+
+    return reference_start+clip_offset, softclipped_tuples
+    
+    
+
+
+    
+def cigartuples2msa(reference, query, reference_start, cigartuples):
+    "Converts a cigartuple and reference start into a Multiple Sequence Alignment"
+    pass
+    
+    
+    
+    
+    
+    
+def _decide_op(ref_letter, query_letter, extended=False):
+    "Determines the cigarop from reference and query MSA positions"
+    
+    if (ref_letter == '-') & (query_letter == '-'):
+        # Both are gaps
+        return None
+    elif ref_letter == '-':
+        # Reference gap, therefore insertion
+        return BAM_CINS
+    elif query_letter == '-':
+        # query gap, therefore deletion
+        return BAM_CDEL
+    elif ref_letter == query_letter:
+        # identical
+        return BAM_CEQUAL if extended else BAM_CMATCH
+    elif ref_letter != query_letter:
+        # mismatch
+        return BAM_CDIFF if extended else BAM_CMATCH
+    
+    raise AssertionError('Did not expect to get here') 
