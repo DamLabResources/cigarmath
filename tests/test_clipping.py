@@ -5,10 +5,11 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
 
 import cigarmath as cm
 from cigarmath import defn
+
 
 def check_cigartuples(guess, correct):
     "Compare two lists of cigartuples"
@@ -16,8 +17,8 @@ def check_cigartuples(guess, correct):
     for (gop, gsz), (cop, csz) in zip(guess, correct):
         assert gop == cop
         assert gsz == csz
-        
-        
+
+
 def test_left_clipping():
     "Test detecting left clipping"
 
@@ -68,8 +69,7 @@ def test_right_clipping():
     cigar = "20H30M10H"
     guess = cm.right_clipping(cigarstr2tup(cigar), with_hard=False)
     assert guess == 0, "Expected excluding of right-hard-clipping"
-    
-    
+
 
 def test_is_hard_clipping():
     "Testing detecting hard-clipping"
@@ -79,7 +79,8 @@ def test_is_hard_clipping():
 
     assert all(cm.is_hard_clipped(h) for h in hard)
     assert not any(cm.is_hard_clipped(n) for n in nothard)
-    
+
+
 def test_declip():
     "Test declipping cigartuples"
 

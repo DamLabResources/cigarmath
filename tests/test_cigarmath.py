@@ -8,7 +8,8 @@ __author__ = "Will Dampier, PhD"
 from cigarmath import cigarmath
 from cigarmath import defn
 
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
+
 
 def check_cigartuples(guess, correct):
     "Compare two lists of cigartuples"
@@ -37,48 +38,6 @@ def test_cigarstr2tuples():
 
 
 
-
-
-
-
-
-
-
-
-
-def test_reference_deletion_blocks():
-    "Test detecting large deletions in cigartuples"
-
-    cigar = "30M10D20S"
-    cigartups = cigarstr2tup(cigar)
-    guess = list(cigarmath.reference_deletion_blocks(cigartups))
-    correct = [(30, 40)]
-    assert guess == correct
-
-    guess = list(cigarmath.reference_deletion_blocks(cigartups, reference_start=10))
-    correct = [(40, 50)]
-    assert guess == correct
-
-    guess = list(cigarmath.reference_deletion_blocks(cigartups, min_size=20))
-    correct = []
-    assert guess == correct
-
-    cigar = "30M10N30M100D10M10I10M50N10M"
-    cigartups = cigarstr2tup(cigar)
-    guess = list(cigarmath.reference_deletion_blocks(cigartups))
-    correct = [(30, 40), (70, 170), (190, 240)]
-    assert guess == correct
-
-    guess = list(cigarmath.reference_deletion_blocks(cigartups, min_size=20))
-    correct = [(70, 170), (190, 240)]
-    assert guess == correct
-
-    # Test handles no-deletions
-    cigar = "300M"
-    cigartups = cigarstr2tup(cigar)
-    guess = list(cigarmath.reference_deletion_blocks(cigartups))
-    correct = []
-    assert guess == correct
 
 
 def test_simplify_blocks():
@@ -133,5 +92,3 @@ def test_collapse_adjacent_blocks():
         (defn.BAM_CINS, 15),
     ]
     check_cigartuples(guess, correct)
-
-

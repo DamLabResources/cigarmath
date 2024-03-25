@@ -1,5 +1,5 @@
 import cigarmath as cm
-from cigarmath.defn import cigarstring_to_cigartuples as cigarstr2tup
+from cigarmath.defn import cigarstr2tup
 
 
 def test_reference_block():
@@ -8,42 +8,33 @@ def test_reference_block():
     ref_start = 10
 
     cigar = "30M"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (ref_start, ref_start + 30) == guess
 
+    
     cigar = "20S30M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Soft-Clipping should not alter the reference block"
 
     cigar = "20H30M10H"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Hard-Clipping should not alter the reference block"
 
     cigar = "20S25M10I5M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 30,
     ) == guess, "Insertions should not alter the reference block"
 
     cigar = "20S25M10D5M10S"
-    guess = cm.reference_block(
-        cigarstr2tup(cigar), reference_start=ref_start
-    )
+    guess = cm.reference_block(cigarstr2tup(cigar), reference_start=ref_start)
     assert (
         ref_start,
         ref_start + 40,
@@ -72,7 +63,7 @@ def test_query_block():
     cigar = "20S25M10D5M10S"
     guess = cm.query_block(cigarstr2tup(cigar))
     assert (20, 20 + 25 + 5) == guess, "Deletions should not shift the query block"
-    
+
 
 def test_block_overlap():
     "Test detecting overlapping blocks"
@@ -94,3 +85,54 @@ def test_block_overlap():
         assert (
             correct == guess
         ), f"Expected {correct} overlap but got {guess} for {block_b}, {block_a}"
+
+        
+def test_reference_deletion_blocks():
+    "Test detecting large deletions in cigartuples"
+
+    cigar = "30M10D20S"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = [(30, 40)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, reference_start=10))
+    correct = [(40, 50)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, min_size=20))
+    correct = []
+    assert guess == correct
+
+    cigar = "30M10N30M100D10M10I10M50N10M"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = [(30, 40), (70, 170), (190, 240)]
+    assert guess == correct
+
+    guess = list(cm.reference_deletion_blocks(cigartups, min_size=20))
+    correct = [(70, 170), (190, 240)]
+    assert guess == correct
+
+    # Test handles no-deletions
+    cigar = "300M"
+    cigartups = cigarstr2tup(cigar)
+    guess = list(cm.reference_deletion_blocks(cigartups))
+    correct = []
+    assert guess == correct
+    
+    
+def test_reference_mapping_blocks():
+    
+    cigar = '6M3D4M6D4M'
+    cigartups = cigarstr2tup(cigar)
+    blocks = list(cm.reference_mapping_blocks(cigartups, reference_start=3, deletion_split=5))
+    
+    assert blocks == [(3, 16), (22, 26)]
+    
+    
+    cigar = '6M3D4M6D4M'
+    cigartups = cigarstr2tup(cigar)
+    blocks = list(cm.reference_mapping_blocks(cigartups, reference_start=3, deletion_split=10))
+    
+    assert blocks == [(3, 26)]
