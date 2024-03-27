@@ -107,3 +107,18 @@ def test_declip():
     guess = cm.declip(cigartups)
     correct = [(defn.BAM_CMATCH, 30)]
     check_cigartuples(guess, correct)
+
+    
+def test_declip_args():
+    
+    cigar = "5S10M2S"
+    cigartups = cigarstr2tup(cigar)
+    seq = 'sssssMMMMMMMMMMss'
+    cigar, clipped_seq = cm.declip(cigartups, seq)
+    
+    assert clipped_seq == 'MMMMMMMMMM'
+    
+    # Can accept many things
+    cigar, _, _, clipped_seq = cm.declip(cigartups, seq, seq, seq)
+    
+    assert clipped_seq == 'MMMMMMMMMM'

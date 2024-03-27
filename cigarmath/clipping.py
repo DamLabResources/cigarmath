@@ -51,7 +51,7 @@ def right_clipping(cigartuples, with_hard=True):
     return 0
 
 
-def declip(cigartuples):
+def declip(cigartuples, *args):
     """Return a set of cigartuples with clipping removed, if any.
 
     REF     AAAAACCCCC
@@ -61,6 +61,14 @@ def declip(cigartuples):
 
     >>>> declip(cigartuples)
     (0, 10)
+    
+    You can also provide sequences or lists as extra *args
+    which will be clipped based on the tuples.
+    
+    >>>> seq = 'TTTAAAAACCCCCGGGG'
+    >>>> tups, clipped_seq = declip(cigartuples, seq)
+    (0, 10)
+    AAAAACCCCC
     """
 
     left_clip = (cigartuples[0][0] == BAM_CSOFT_CLIP) | (
@@ -69,14 +77,23 @@ def declip(cigartuples):
     right_clip = (cigartuples[-1][0] == BAM_CSOFT_CLIP) | (
         cigartuples[-1][0] == BAM_CHARD_CLIP
     )
+    
+    cigarstart = 1 if left_clip else 0  # Start from the second element if there's a left clip, otherwise start from the first
+    cigarend = -1 if right_clip else None  # End one element early if there's a right clip, otherwise go to the end
+    
+    if args:
+        clipstart = cigartuples[0][1] if left_clip else 0
+        clipend = -cigartuples[-1][1] if right_clip else None
+        print(clipstart, clipend)
+        clipped_args = [items[clipstart:clipend] for items in args]
+        return cigartuples[cigarstart:cigarend], *clipped_args
+    
+    return cigartuples[cigarstart:cigarend]
+        
+    
+    
 
-    if left_clip and right_clip:
-        return cigartuples[1:-1]
-    elif right_clip:
-        return cigartuples[:-1]
-    elif left_clip:
-        return cigartuples[1:]
-    return cigartuples
+    
 
 
 def is_hard_clipped(cigartuples):
