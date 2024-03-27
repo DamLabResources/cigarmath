@@ -15,7 +15,8 @@ from .clipping import softclipify
 
 from .block import reference_offset
 from .block import reference_block
-from .block import query_offest
+from .block import query_start
+from .block import query_offset
 from .block import query_block
 from .block import block_overlap_length
 from .block import reference_offset

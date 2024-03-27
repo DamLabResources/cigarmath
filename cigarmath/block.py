@@ -51,7 +51,7 @@ def reference_block(cigartuples, reference_start=0):
     return reference_start, reference_start + offset
 
 
-def query_offest(cigartuples):
+def query_offset(cigartuples):
     """Calculate the length of the query mapping block based on cigartuples.
 
     REF     AAAAGACC--CCC
@@ -77,6 +77,21 @@ def query_offest(cigartuples):
     )
 
 
+def query_start(cigartuples):
+    """Return the start position on the query of this alignment.
+
+    REF     AAAAGACC--CCC
+    QRY     AAAA-ACCGGCCC
+    CGS  HHHMMMMDMMMIIMMMHHHH
+    CGT  3H 4M 1D3M 2I 3M 4H
+
+    >>>> query_start(cigartuples)
+    3
+    """
+    
+    return left_clipping(cigartuples)
+
+
 def query_block(cigartuples):
     """Returns a tuple of the query (start, end) positions of the aligned segment
 
@@ -94,7 +109,7 @@ def query_block(cigartuples):
     query_start = left_clipping(cigartuples)
 
     # add up remaining query-consuming blocks
-    offset = query_offest(cigartuples)
+    offset = query_offset(cigartuples)
 
     return query_start, query_start + offset
 
