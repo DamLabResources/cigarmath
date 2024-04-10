@@ -63,6 +63,8 @@ CONSUMES_QUERY = {
     bam_num for bam_num, cigar_letter in enumerate(NTS) if cigar_letter.consumes_query
 }
 
+CLIPPING = {4, 5}
+
 
 def cigarstr2tup(cigarstring):
     """Create cigartuples from cigarstring"""

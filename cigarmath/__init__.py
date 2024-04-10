@@ -38,3 +38,7 @@ from .conversions import msa2cigartuples
 from .conversions import softclipify
 
 from .cigarmath import collapse_adjacent_blocks
+
+from .mapping import cigar_iterator
+from .mapping import reference2query
+from .mapping import query2reference
