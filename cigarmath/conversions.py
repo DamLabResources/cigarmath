@@ -160,7 +160,7 @@ def msa2cigartuples(ref_msa, query_msa):
     
 def cigartuples2msa(reference, query, reference_start, cigartuples):
     "Converts a cigartuple and reference start into a Multiple Sequence Alignment"
-    pass
+    raise NotImplementedError
     
     
     

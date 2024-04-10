@@ -26,3 +26,6 @@ test: venv
 
 run: venv
 	${PYTHON} your_script.py
+
+nbstrip:
+	nbstripout --keep-output notebooks/*.ipynb
