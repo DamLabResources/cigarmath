@@ -1,6 +1,3 @@
-import numpy as np
-import matplotlib.pyplot as plt
-
 import cigarmath as cm
 
 def test_segments_to_binary():
