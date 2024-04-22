@@ -128,9 +128,6 @@ def _before_site_on_ref(site, index):
             
 def liftover(cigartuples, *reference_sites, reference_start=0, edge = 'left', small_indel_limit = 10):
     "Create an iterator which yields the query index for each reference site"
-
-    assert min(reference_sites)>= reference_start, 'Lirst site cannot be before the reference_start'
-    assert max(reference_sites)<= (reference_start+reference_offset(cigartuples)), 'Last site cannot be after reference_end'
     
     assert edge in {'left', 'right', None}
     
@@ -150,14 +147,14 @@ def _liftover_index(cigar_indexes, site, edge, limit):
                 return cigar_indexes[n].query_index
             elif (cigar_indexes[n].query_index is None) and (edge == 'left'):
                 # Check backwards along the alignment to find a query position that maps
-                for left_check in range(n-1, n-limit, -1):
+                for left_check in range(n-1, max(n-limit, 0), -1):
                     if cigar_indexes[left_check].query_index is not None:
                         return cigar_indexes[left_check].query_index
                 # Checked back past the limit, must be a long deletion
                 return None
             elif (cigar_indexes[n].query_index is None) and (edge == 'right'):
                 # Check forwards along the alignment to find a query position that maps
-                for right_check in range(n+1, n+limit+1):
+                for right_check in range(n+1, min(n+limit+1, len(cigar_indexes))):
                     if cigar_indexes[right_check].query_index is not None:
                         return cigar_indexes[right_check].query_index
                 # Checked back past the limit, must be a long deletion
