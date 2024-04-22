@@ -6,8 +6,11 @@ __copyright__ = """Copyright (C) 2022-present
 __author__ = "Will Dampier, PhD"
 
 from dataclasses import dataclass
+from itertools import dropwhile
+from functools import partial
 
 from cigarmath.defn import CONSUMES_REFERENCE, CONSUMES_QUERY, CLIPPING, BAM_CSOFT_CLIP
+from cigarmath.block import reference_offset
 
 
 @dataclass
@@ -112,7 +115,53 @@ def cigar_iterator_reference_slice(cigartuples, reference_start=0, region_refere
             started = True
             yield cigar_index
 
+def is_sorted_ascending(lst):
+    return all(lst[i] <= lst[i+1] for i in range(len(lst) - 1))
+            
+def _before_site_on_ref(site, index):
+    "return True if this index if before this site on the reference"
+    
+    if index.reference_index is None:
+        return True
+    return index.reference_index < site-1
+    
+            
+def liftover(cigartuples, *reference_sites, reference_start=0, edge = 'left', small_indel_limit = 10):
+    "Create an iterator which yields the query index for each reference site"
 
+    assert min(reference_sites)>= reference_start, 'Lirst site cannot be before the reference_start'
+    assert max(reference_sites)<= (reference_start+reference_offset(cigartuples)), 'Last site cannot be after reference_end'
+    
+    assert edge in {'left', 'right', None}
+    
+    cigar_indexes = list(cigar_iterator(cigartuples, reference_start=reference_start))
+    
+    for site in reference_sites:
+        yield _liftover_index(cigar_indexes, site, edge, small_indel_limit)
+    
+    
+def _liftover_index(cigar_indexes, site, edge, limit):
+    
+    for n in range(len(cigar_indexes)):
+        
+        if cigar_indexes[n].reference_index == site:
+            if (cigar_indexes[n].query_index is not None) or (edge is None):
+                # Mapped or don't care
+                return cigar_indexes[n].query_index
+            elif (cigar_indexes[n].query_index is None) and (edge == 'left'):
+                # Check backwards along the alignment to find a query position that maps
+                for left_check in range(n-1, n-limit, -1):
+                    if cigar_indexes[left_check].query_index is not None:
+                        return cigar_indexes[left_check].query_index
+                # Checked back past the limit, must be a long deletion
+                return None
+            elif (cigar_indexes[n].query_index is None) and (edge == 'right'):
+                # Check forwards along the alignment to find a query position that maps
+                for right_check in range(n+1, n+limit+1):
+                    if cigar_indexes[right_check].query_index is not None:
+                        return cigar_indexes[right_check].query_index
+                # Checked back past the limit, must be a long deletion
+                return None
 
 
 # Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved

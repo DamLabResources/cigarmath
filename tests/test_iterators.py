@@ -145,3 +145,39 @@ def test_cigar_iterator_reference_slice():
                                                               region_reference_end = 7))
     print('Checking both bound')
     check_index_list(cigiters, correct_indexes[5:-3])
+    
+    
+def test_liftover():
+    """
+    ALNPOS   01234567890 # Index of the entire alignment
+    RPOS    0123  456789 # Index within the reference
+    REF     AAGA--CTTCGG
+    CIGAR    SMMIIMDDMSS
+    CIGIND   01122344566 # Index of the cigar block
+    CBLKIND  001010010   # Index within the cigar block
+    QRY     -xAAGGC--Cxx
+    QPOS     012345  678 # Index within the query 
+    """
+    
+    cigartups, ref_start, _ = make_example()
+    
+    lift_ref_pos = [3, 4, 5, 6, 7]
+    
+    # right
+    lift_que_pos = [2, 5, 6, 6, 6]
+    lift_pos = list(cm.liftover(cigartups, *lift_ref_pos, reference_start=ref_start, edge='right'))
+    
+    assert lift_pos == lift_que_pos
+    
+    
+    # left
+    lift_que_pos = [2, 5, 5, 5, 6]
+    lift_pos = list(cm.liftover(cigartups, *lift_ref_pos, reference_start=ref_start, edge='left'))
+    
+    assert lift_pos == lift_que_pos
+    
+    # None
+    lift_que_pos = [2, 5, None, None, 6]
+    lift_pos = list(cm.liftover(cigartups, *lift_ref_pos, reference_start=ref_start, edge=None))
+    
+    assert lift_pos == lift_que_pos
