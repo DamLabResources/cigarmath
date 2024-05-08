@@ -45,3 +45,4 @@ from .mapping import query2reference
 from .iterators import cigar_iterator
 from .iterators import cigar_iterator_reference_slice
 from .iterators import liftover
+from .iterators import iterator_attach

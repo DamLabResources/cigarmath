@@ -8,6 +8,7 @@ __author__ = "Will Dampier, PhD"
 from dataclasses import dataclass
 from itertools import dropwhile
 from functools import partial
+from typing import Optional
 
 from cigarmath.defn import CONSUMES_REFERENCE, CONSUMES_QUERY, CLIPPING, BAM_CSOFT_CLIP
 from cigarmath.block import reference_offset
@@ -23,6 +24,10 @@ class CigarIndex:
     cigar_index: int
     cigar_block_index: int
     cigar_op: int
+    
+    query_letter: Optional[str] = None
+    query_quality: Optional[int] = None
+    reference_letter: Optional[str] = None
 
 
 def cigar_iterator(cigartuples, reference_start=0):
@@ -115,6 +120,23 @@ def cigar_iterator_reference_slice(cigartuples, reference_start=0, region_refere
             started = True
             yield cigar_index
 
+
+def iterator_attach(cigar_index_iterator, reference_sequence=None, query_sequence=None, query_qualities=None):
+    "Attach reference and query information to a cigar_index_iterator"
+    
+    for cigar_index in cigar_index_iterator:
+        if reference_sequence and (cigar_index.reference_index is not None):
+            cigar_index.reference_letter = reference_sequence[cigar_index.reference_index]
+        if query_sequence and (cigar_index.query_index is not None):
+            cigar_index.query_letter = query_sequence[cigar_index.query_index]
+            if query_qualities:
+                cigar_index.query_quality = query_qualities[cigar_index.query_index]
+        yield cigar_index
+            
+        
+    
+            
+            
 def is_sorted_ascending(lst):
     return all(lst[i] <= lst[i+1] for i in range(len(lst) - 1))
             

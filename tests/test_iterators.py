@@ -147,6 +147,47 @@ def test_cigar_iterator_reference_slice():
     check_index_list(cigiters, correct_indexes[5:-3])
     
     
+def test_iterator_attach():
+    """
+    ALNPOS   01234567890 # Index of the entire alignment
+    RPOS    0123  456789 # Index within the reference
+    REF     AAGA--CTTCGG
+    CIGAR    SMMIIMDDMSS
+    CIGIND   01122344566 # Index of the cigar block
+    CBLKIND  001010010   # Index within the cigar block
+    QRY     -xAAGGC--Cxx
+    QPOS     012345  678 # Index within the query 
+    """
+    
+    cigartups, ref_start, correct_indexes = make_example()
+    cigiters = list(cm.cigar_iterator(cigartups, reference_start=ref_start))
+    reference = 'AAGACTTCGG'
+    query = 'xAAGGCCxx'
+    quals = [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    
+    new_iters = cm.iterator_attach(cigiters,
+                                   reference_sequence=reference,
+                                   query_sequence=query,
+                                   query_qualities=quals
+                                   )
+    new_iters = list(new_iters)
+    assert len(new_iters) == len(cigiters)
+    
+    for it in new_iters:
+        if it.reference_index is not None:
+            assert it.reference_letter == reference[it.reference_index]
+        if it.query_index is not None:
+            assert it.query_letter == query[it.query_index]
+            assert it.query_quality == quals[it.query_index]
+            
+    
+    
+    
+    
+    
+    
+    
+    
 def test_liftover():
     """
     ALNPOS   01234567890 # Index of the entire alignment
