@@ -2,6 +2,7 @@
 # https://samtools.github.io/hts-specs/SAMv1.pdf
 
 from collections import namedtuple
+from typing import List, Tuple, Literal
 
 __copyright__ = (
     "Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved"
@@ -99,3 +100,8 @@ BAM_CBACK = 9  # B
 
 
 # Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved
+
+# A cigar tuple is (operation_code: int, length: int)
+# operation_code is one of the BAM_* constants defined below
+CigarTuple = Tuple[Literal[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], int]
+CigarTuples = List[CigarTuple]

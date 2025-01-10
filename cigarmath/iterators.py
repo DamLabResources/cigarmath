@@ -8,29 +8,32 @@ __author__ = "Will Dampier, PhD"
 from dataclasses import dataclass
 from itertools import dropwhile
 from functools import partial
-from typing import Optional
-
-from cigarmath.defn import CONSUMES_REFERENCE, CONSUMES_QUERY, CLIPPING, BAM_CSOFT_CLIP
+from typing import Optional, Iterator, List, Union, Sequence, Iterable
+from cigarmath.defn import (
+    CigarTuples,
+    CONSUMES_REFERENCE,
+    CONSUMES_QUERY,
+    CLIPPING,
+    BAM_CSOFT_CLIP
+)
 from cigarmath.block import reference_offset
 
 
 @dataclass
 class CigarIndex:
     "A helper class for holding information about each position in the alignment"
-    
     alignment_index: int
-    reference_index: int
-    query_index: int
+    reference_index: Optional[int]
+    query_index: Optional[int]
     cigar_index: int
     cigar_block_index: int
     cigar_op: int
-    
     query_letter: Optional[str] = None
     query_quality: Optional[int] = None
     reference_letter: Optional[str] = None
 
 
-def cigar_iterator(cigartuples, reference_start=0):
+def cigar_iterator(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[CigarIndex]:
     """Yields alignment, query, reference, and cigar indexes in alignment order.
     
     ALNPOS   01234567890 # Index of the entire alignment
@@ -49,16 +52,16 @@ def cigar_iterator(cigartuples, reference_start=0):
     
     if cigartuples[0][0] in CLIPPING:
         op, sz = cigartuples[0]
-        yield from _left_clip_iterator(sz, cigar_op = op)
+        yield from _left_clip_iterator(sz, cigar_op=op)
         
         alignment_index = sz-1
         query_index = sz-1
         cigartuples = cigartuples[1:]
-        cigar_op_start=1
+        cigar_op_start = 1
     else:
         query_index = -1
         alignment_index = -1
-        cigar_op_start=0
+        cigar_op_start = 0
         
     reference_index = reference_start-1
     
@@ -74,36 +77,45 @@ def cigar_iterator(cigartuples, reference_start=0):
             query_index += query_delta
             reference_index += reference_delta
             
-            yield CigarIndex(alignment_index = alignment_index,
-                             reference_index = reference_index if cigar_op in CONSUMES_REFERENCE else None,
-                             query_index = query_index if cigar_op in CONSUMES_QUERY else None,
-                             cigar_index = cigar_index,
-                             cigar_block_index = cigar_block_index,
-                             cigar_op = cigar_op)
+            yield CigarIndex(
+                alignment_index=alignment_index,
+                reference_index=reference_index if cigar_op in CONSUMES_REFERENCE else None,
+                query_index=query_index if cigar_op in CONSUMES_QUERY else None,
+                cigar_index=cigar_index,
+                cigar_block_index=cigar_block_index,
+                cigar_op=cigar_op
+            )
             
             
-def _left_clip_iterator(size, cigar_op = BAM_CSOFT_CLIP):
+def _left_clip_iterator(size: int, cigar_op: int = BAM_CSOFT_CLIP) -> Iterator[CigarIndex]:
     "Handle left-clipping special case"
     
     for index in range(size):
-        yield CigarIndex(alignment_index = index,
-                         reference_index = None,
-                         query_index = index,
-                         cigar_index = 0,
-                         cigar_block_index = index,
-                         cigar_op = cigar_op)
+        yield CigarIndex(
+            alignment_index=index,
+            reference_index=None,
+            query_index=index,
+            cigar_index=0,
+            cigar_block_index=index,
+            cigar_op=cigar_op
+        )
 
 
         
 
-def cigar_iterator_reference_slice(cigartuples, reference_start=0, region_reference_start=None, region_reference_end=None):
+def cigar_iterator_reference_slice(
+    cigartuples: CigarTuples,
+    reference_start: int = 0,
+    region_reference_start: Optional[int] = None,
+    region_reference_end: Optional[int] = None
+) -> Iterator[CigarIndex]:
     "Return only a slice of the cigar_iterator based on a reference region"
     
     started = False
     
     for cigar_index in cigar_iterator(cigartuples, reference_start=reference_start):
         
-        if (cigar_index.reference_index is None) and (started == False):
+        if (cigar_index.reference_index is None) and (not started):
             # Clipped or insertion BEFORE starting
             # so skip
             pass
@@ -121,7 +133,12 @@ def cigar_iterator_reference_slice(cigartuples, reference_start=0, region_refere
             yield cigar_index
 
 
-def iterator_attach(cigar_index_iterator, reference_sequence=None, query_sequence=None, query_qualities=None):
+def iterator_attach(
+    cigar_index_iterator: Iterator[CigarIndex],
+    reference_sequence: Optional[str] = None,
+    query_sequence: Optional[str] = None,
+    query_qualities: Optional[Sequence[int]] = None
+) -> Iterator[CigarIndex]:
     "Attach reference and query information to a cigar_index_iterator"
     
     for cigar_index in cigar_index_iterator:
@@ -137,10 +154,10 @@ def iterator_attach(cigar_index_iterator, reference_sequence=None, query_sequenc
     
             
             
-def is_sorted_ascending(lst):
+def is_sorted_ascending(lst: Sequence) -> bool:
     return all(lst[i] <= lst[i+1] for i in range(len(lst) - 1))
             
-def _before_site_on_ref(site, index):
+def _before_site_on_ref(site: int, index: CigarIndex) -> bool:
     "return True if this index if before this site on the reference"
     
     if index.reference_index is None:
@@ -148,7 +165,13 @@ def _before_site_on_ref(site, index):
     return index.reference_index < site-1
     
             
-def liftover(cigartuples, *reference_sites, reference_start=0, edge = 'left', small_indel_limit = 10):
+def liftover(
+    cigartuples: CigarTuples,
+    *reference_sites: int,
+    reference_start: int = 0,
+    edge: Optional[str] = 'left',
+    small_indel_limit: int = 10
+) -> Iterator[Optional[int]]:
     "Create an iterator which yields the query index for each reference site"
     
     assert edge in {'left', 'right', None}
@@ -159,7 +182,12 @@ def liftover(cigartuples, *reference_sites, reference_start=0, edge = 'left', sm
         yield _liftover_index(cigar_indexes, site, edge, small_indel_limit)
     
     
-def _liftover_index(cigar_indexes, site, edge, limit):
+def _liftover_index(
+    cigar_indexes: List[CigarIndex],
+    site: int,
+    edge: Optional[str],
+    limit: int
+) -> Optional[int]:
     
     for n in range(len(cigar_indexes)):
         

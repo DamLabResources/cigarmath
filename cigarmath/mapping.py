@@ -5,12 +5,11 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-
-
+from typing import Iterator, Optional, Tuple
+from cigarmath.defn import CigarTuples
 from cigarmath.iterators import cigar_iterator
-    
 
-def reference2query(cigartuples, reference_start=0):
+def reference2query(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[Optional[int]]:
     """Create a generator the same size as the reference alignment
     that maps positions in the reference to positions in the query.
     
@@ -27,13 +26,12 @@ def reference2query(cigartuples, reference_start=0):
     >> r2q = reference2query(cigartuples, reference_start=2)
     (1, 2, 5, None, None, 6)
     """
-    
     for cig_index in cigar_iterator(cigartuples, reference_start=reference_start):
         if cig_index.reference_index is not None:
             yield cig_index.query_index
-    
-    
-def query2reference(cigartuples, reference_start=0):
+
+
+def query2reference(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[Optional[int]]:
     """Create a generator the same size as the query
     that maps positions in the query to positions in the reference
     
@@ -49,13 +47,12 @@ def query2reference(cigartuples, reference_start=0):
     >> q2r = query2reference(cigartuples, reference_start=2)
     [None, 2, 3, None, None, 4, 7, None, None]
     """
-    
     for cig_index in cigar_iterator(cigartuples, reference_start=reference_start):
         if cig_index.query_index is not None:
             yield cig_index.reference_index
-    
-    
-def query2cigar(cigartuples, reference_start=0):
+
+
+def query2cigar(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[Tuple[int, int]]:
     """Create a generator the same size as the query
     that maps positions in the query to CIGAR positions.
     
@@ -72,7 +69,6 @@ def query2cigar(cigartuples, reference_start=0):
     >> q2c = query2cigar(cigartuples, reference_start=2)
     [(0,0), (1,0), (1,1), (2,0), (2,1), (3,0), (5,0), (6,0), (6,1)]
     """
-    
     for cig_index in cigar_iterator(cigartuples, reference_start=reference_start):
         if cig_index.query_index is not None:
             yield (cig_index.cigar_index, cig_index.cigar_block_index)

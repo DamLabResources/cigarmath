@@ -5,10 +5,13 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import CONSUMES_QUERY
-from cigarmath.defn import CONSUMES_REFERENCE
+from cigarmath.defn import (
+    CigarTuples,
+    CONSUMES_QUERY,
+    CONSUMES_REFERENCE
+)
 
-def inferred_query_sequence_length(cigartuples):
+def inferred_query_sequence_length(cigartuples: CigarTuples) -> int:
     """Returns the expected length of query_sequence based on cigartuples
 
     POS  01234567890  12345
@@ -20,13 +23,12 @@ def inferred_query_sequence_length(cigartuples):
     >>>> inferred_query_sequence_length(cigartuples)
     19
     """
-
     return sum(
         block_size for bam_num, block_size in cigartuples if bam_num in CONSUMES_QUERY
     )
 
 
-def inferred_reference_length(cigartuples):
+def inferred_reference_length(cigartuples: CigarTuples) -> int:
     """Returns the expected length of query_sequence based on cigartuples
 
     POS  01234567890  12345
@@ -38,7 +40,6 @@ def inferred_reference_length(cigartuples):
     >>>> inferred_reference_length(cigartuples)
     11
     """
-
     return sum(
         block_size
         for bam_num, block_size in cigartuples

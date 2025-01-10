@@ -5,16 +5,19 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import CONSUMES_REFERENCE
-from cigarmath.defn import CONSUMES_QUERY
-from cigarmath.defn import BAM_CSOFT_CLIP
-from cigarmath.defn import BAM_CHARD_CLIP
-from cigarmath.defn import BAM_CDEL
-from cigarmath.defn import BAM_CREF_SKIP
+from typing import Iterator, Tuple
+from cigarmath.defn import (
+    CONSUMES_REFERENCE,
+    CONSUMES_QUERY,
+    BAM_CSOFT_CLIP,
+    BAM_CHARD_CLIP,
+    BAM_CDEL,
+    BAM_CREF_SKIP,
+    CigarTuples,
+)
 from cigarmath.clipping import left_clipping
 
-
-def reference_offset(cigartuples):
+def reference_offset(cigartuples: CigarTuples) -> int:
     """Calculate the length of the reference mapping block based on cigartuples.
 
     REF     AAAAGACC--CCC
@@ -34,7 +37,7 @@ def reference_offset(cigartuples):
     )
 
 
-def reference_block(cigartuples, reference_start=0):
+def reference_block(cigartuples: CigarTuples, reference_start: int = 0) -> Tuple[int, int]:
     """Returns a tuple of the reference (start, end) positions of the aligned segment
 
     POS  01234567890  12345
@@ -51,7 +54,7 @@ def reference_block(cigartuples, reference_start=0):
     return reference_start, reference_start + offset
 
 
-def query_offset(cigartuples):
+def query_offset(cigartuples: CigarTuples) -> int:
     """Calculate the length of the query mapping block based on cigartuples.
 
     REF     AAAAGACC--CCC
@@ -77,7 +80,7 @@ def query_offset(cigartuples):
     )
 
 
-def query_start(cigartuples):
+def query_start(cigartuples: CigarTuples) -> int:
     """Return the start position on the query of this alignment.
 
     REF     AAAAGACC--CCC
@@ -92,7 +95,7 @@ def query_start(cigartuples):
     return left_clipping(cigartuples)
 
 
-def query_block(cigartuples):
+def query_block(cigartuples: CigarTuples) -> Tuple[int, int]:
     """Returns a tuple of the query (start, end) positions of the aligned segment
 
     POS  01234567890  12345
@@ -114,7 +117,7 @@ def query_block(cigartuples):
     return query_start, query_start + offset
 
 
-def block_overlap_length(block_a, block_b):
+def block_overlap_length(block_a: Tuple[int, int], block_b: Tuple[int, int]) -> int:
     """Given two (start,stop) tuples, return their overlap.
     negative values indicate distance to overlap.
 
@@ -140,7 +143,11 @@ def block_overlap_length(block_a, block_b):
     return min(block_a[1], block_b[1]) - max(block_a[0], block_b[0])
 
 
-def reference_mapping_blocks(cigartuples, reference_start=0, deletion_split=10):
+def reference_mapping_blocks(
+    cigartuples: CigarTuples, 
+    reference_start: int = 0, 
+    deletion_split: int = 10
+) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of mapped sites split by deletions.
     
     POS0  000000000011111111112222222222
@@ -165,7 +172,11 @@ def reference_mapping_blocks(cigartuples, reference_start=0, deletion_split=10):
     yield left, right
 
 
-def reference_deletion_blocks(cigartuples, reference_start=0, min_size=1):
+def reference_deletion_blocks(
+    cigartuples: CigarTuples, 
+    reference_start: int = 0, 
+    min_size: int = 1
+) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size
 
     POS0  000000000011111111112222222222
