@@ -15,7 +15,7 @@ Cigar Math provides tools to handle and manipulate CIGAR strings/tuples - the co
 ## Installation
 
 ```bash
-pip install cigar-math
+pip install cigarmath
 ```
 
 ## Basic Usage
@@ -59,8 +59,6 @@ print(query_pos)  # [1, 2, 5, None, None, 6]
 
 ## Documentation
 
-For detailed API documentation and more examples, see our [documentation](link-to-docs).
-
 The `notebooks/` directory contains Jupyter notebooks with detailed examples:
 - `block.ipynb`: Working with alignment blocks
 - More examples coming soon...
@@ -72,10 +70,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Credits
-
-This package was created with Cookiecutter and the `audreyr/cookiecutter-pypackage` project template.
 
 ## Citation
 
