@@ -134,21 +134,18 @@ def test_combine_adjacent_alignments():
 
 
     # Test with gap (deletion)
-    first = (5, cigarstr2tup("12M 13S"))
-    second = (10, cigarstr2tup("12S 3M 2D 4M 2I 4M"))
+    first = (5, cigarstr2tup("12M 17S"))
+    second = (10, cigarstr2tup("12S 3M 2D 8M 2I 4M"))
 
     correct_cigars = [
-        (BAM_CMATCH, 14),
+        (BAM_CMATCH, 16),
         (BAM_CINS, 2),
         (BAM_CMATCH, 4),
     ]    
     
     new_start, new_cigars = combine_adjacent_alignments(first, second)
-    print(new_cigars)
     assert new_start == 5
     assert tuple(new_cigars) == tuple(correct_cigars)
-    
-    raise AssertionError("Stop here")
 
     # Test perfectly adjacent
     first = (10, cigarstr2tup("5M"))    # AAAAA
@@ -157,49 +154,61 @@ def test_combine_adjacent_alignments():
     new_start, new_cigars = combine_adjacent_alignments(first, second)
     assert new_start == 10
     assert tuple(new_cigars) == ((0,8),)
+    
 
 
 def test_combine_multiple_alignments():
     """Test combining multiple alignments"""
-
-    raise AssertionError("Stop here")
     
     # Test basic combination
 
     alignments = [
-        (5, cigarstr2tup("5M2D3M")),  
-        (15, cigarstr2tup("4M2I2M")),
-        (25, cigarstr2tup("5M"))
+        (5, cigarstr2tup("5M 2D 3M 18S")),  
+        (20, cigarstr2tup("8S 4M 2I 2M 5S")),
+        (29, cigarstr2tup("16S 5M 2I 3M"))
     ]
 
-    # NUM: 0123456789012345678901234567890
-    # Q1:       AAAAA--CCC
-    # Q2:                 DDDDIIEE
-    # Q3:                           FFFFF
-  
+    # NUM: 012345678901234567890123--4567890123--4567890
+    # Q1:       abcde--fgh
+    # Q2:                      ijklMNop
+    # Q3:                                 qrstUVwxyz
+    # COR:      abcde--fgh-----ijklMNop---qrstUVwxyz
+
     new_start, new_cigars = combine_multiple_alignments(alignments)
     assert new_start == 5
 
     correct_cigars = [
         (BAM_CMATCH, 5),
         (BAM_CDEL, 2),
-        (BAM_CMATCH, 7),
+        (BAM_CMATCH, 3),
+
+        (BAM_CDEL, 5),
+
+        (BAM_CMATCH, 4),
         (BAM_CINS, 2),
         (BAM_CMATCH, 2),
-        (BAM_CDEL, 2),
-        (BAM_CMATCH, 5)
+        
+        (BAM_CDEL, 3),
+
+        (BAM_CMATCH, 5),
+        (BAM_CINS, 2),
+        (BAM_CMATCH, 3),
     ]
+
     assert tuple(new_cigars) == tuple(correct_cigars)
     
-    
-
-    # Test with allowed overlap
     overlapping = [
-        (10, cigarstr2tup("8M")),      # AAAAAAAA
-        (15, cigarstr2tup("8M")),      #     CCCCCCCC
-        (25, cigarstr2tup("5M"))       #         DDDDD
+        (5, cigarstr2tup("5M 2D 3M 18S")),  
+        (9, cigarstr2tup("8S 4M 2I 2M 10S")),
+        (29, cigarstr2tup("16S 5M 2I 3M"))
     ]
-    
+
+    # NUM: 0123456789012345678901234567890123--4567890
+    # Q1:       abcde--fgh
+    # Q2:           ijklMNop
+    # Q3:                               qrstuvwxyz
+    # COR:      abcde--fghop------------qrstuvwxyz
+
     # Should fail with no overlap allowed
     try:
         combine_multiple_alignments(overlapping)
@@ -207,9 +216,26 @@ def test_combine_multiple_alignments():
     except ValueError:
         pass
     
+
+    correct_cigars = [
+        (BAM_CMATCH, 5),
+        (BAM_CDEL, 2),
+        (BAM_CMATCH, 5),
+        
+        (BAM_CDEL, 12),
+
+        (BAM_CMATCH, 5),
+        (BAM_CINS, 2),
+        (BAM_CMATCH, 3),
+    ]
+
     # Should succeed with overlap allowed
-    new_start, new_cigars = combine_multiple_alignments(overlapping, allowed_overlap=4)
-    assert new_start == 10
+    new_start, new_cigars = combine_multiple_alignments(overlapping, allowed_overlap=10)
+    print(correct_cigars)
+    print(new_cigars)
+    
+    assert new_start == 5
+    assert tuple(new_cigars) == tuple(correct_cigars)
     
     # Test empty input
     try:

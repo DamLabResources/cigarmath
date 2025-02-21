@@ -241,14 +241,14 @@ def combine_multiple_alignments(
         
         if prev_query_end is not None:
             overlap = prev_query_end - q_start
-            if overlap > allowed_overlap:
+            if (prev_query_end - q_start) > allowed_overlap:
                 raise ValueError(
                     f"Alignments overlap by {overlap} bases in query space "
                     f"(maximum allowed: {allowed_overlap}): "
                     f"Previous alignment ends at {prev_query_end}, "
                     f"but next alignment starts at {q_start}"
                 )
-            if r_start < prev_ref_end:
+            if (prev_ref_end - r_start) > allowed_overlap:
                 raise ValueError(
                     f"Alignments are not sequential in reference space: "
                     f"Previous alignment ends at {prev_ref_end}, "
