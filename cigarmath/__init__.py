@@ -46,3 +46,7 @@ from .iterators import cigar_iterator
 from .iterators import cigar_iterator_reference_slice
 from .iterators import liftover
 from .iterators import iterator_attach
+
+from .combine import combine_multiple_alignments
+from .combine import combine_adjacent_alignments
+from .combine import trim_alignment
