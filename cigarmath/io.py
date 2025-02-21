@@ -78,7 +78,9 @@ def _get_primary_segment(segments: List):
 def combined_segment_stream(segments: Iterator) -> Iterator[Tuple[int, CigarTuples, List]]:
     """Combine aligned segments into a single alignment."""
 
-    for _, segments in groupby(segments, key=lambda x: x.query_name):
+    valid_segments = (segment for segment in segments if segment.cigartuples)
+
+    for _, segments in groupby(valid_segments, key=lambda x: x.query_name):
         segments = list(segments)
         if len(segments) > 1:
             try:
