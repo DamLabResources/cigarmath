@@ -15,7 +15,7 @@ Cigar Math provides tools to handle and manipulate CIGAR strings/tuples - the co
 ## Installation
 
 ```bash
-pip install cigarmath
+pip install git+https://github.com/DamLabResources/cigarmath
 ```
 
 ## Basic Usage
@@ -79,8 +79,8 @@ If you use this software in your research, please cite:
 @software{cigar_math,
   author = {Dampier, Will and Klopfenstein, DV},
   title = {Cigar Math: A Python library for CIGAR string operations},
-  year = {2022},
+  year = {2025},
   publisher = {GitHub},
-  url = {https://github.com/username/cigar-math}
+  url = {https://github.com/DamLabResources/cigarmath}
 }
 ```
