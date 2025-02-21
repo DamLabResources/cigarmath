@@ -6,8 +6,10 @@ __copyright__ = """Copyright (C) 2022-present
 __author__ = "Will Dampier, PhD"
 
 import random
-from typing import Union, Iterator, Optional, Tuple, TYPE_CHECKING
+from itertools import groupby
+from typing import Union, Iterator, Optional, Tuple, TYPE_CHECKING, List
 from cigarmath.defn import CigarTuples
+from cigarmath.combine import combine_multiple_alignments
 
 if TYPE_CHECKING:
     try:
@@ -52,3 +54,40 @@ def _downsample(stream: Iterator, frac: float) -> Iterator:
     for item in stream:
         if random.random() < frac:
             yield item
+
+
+def _combine_aligned_segments(segments: Iterator) ->Tuple[int, CigarTuples, List]:
+    """Combine aligned segments into a single alignment."""
+    
+    segments = list(segments)
+    try:
+        packed = [(segment.reference_start, segment.cigartuples) for segment in segments]
+        new_start, new_cigars = combine_multiple_alignments(packed)
+    except ValueError:
+        return None, None, segments
+    return new_start, new_cigars, segments
+
+
+def _get_primary_segment(segments: List):
+    """Get the primary segment from a list of aligned segments."""
+    for segment in segments:
+        if segment.is_primary_alignment:
+            return segment
+    return segments[0]
+
+def combined_segment_stream(segments: Iterator) -> Iterator[Tuple[int, CigarTuples, List]]:
+    """Combine aligned segments into a single alignment."""
+
+    for _, segments in groupby(segments, key=lambda x: x.query_name):
+        segments = list(segments)
+        if len(segments) > 1:
+            try:
+                new_start, new_cigars, segments = _combine_aligned_segments(segments)
+                yield (new_start, new_cigars, segments)
+            except ValueError:
+                primary = _get_primary_segment(segments)
+                yield (primary.reference_start, primary.cigartuples, segments)
+        else:
+            yield (segments[0].reference_start, segments[0].cigartuples, segments)
+
+    
