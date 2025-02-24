@@ -50,3 +50,5 @@ from .iterators import iterator_attach
 from .combine import combine_multiple_alignments
 from .combine import combine_adjacent_alignments
 from .combine import trim_alignment
+
+from .pileup import depth

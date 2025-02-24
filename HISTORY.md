@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.3 (2025-02-25)
+------------------
+
+* Adding `depth` function to allow calculating the number of each base at each position across many alignments.
+
 0.2.1 (2025-02-22)
 ------------------
 
