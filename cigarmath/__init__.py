@@ -2,14 +2,13 @@
 
 __author__ = """Will Dampier"""
 __email__ = "wnd22@drexel.edu"
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 
 from .clipping import left_clipping
 from .clipping import right_clipping
 from .clipping import declip
 from .clipping import is_hard_clipped
-from .clipping import left_clipping
 from .clipping import softclipify
 
 
@@ -19,7 +18,6 @@ from .block import query_start
 from .block import query_offset
 from .block import query_block
 from .block import block_overlap_length
-from .block import reference_offset
 from .block import reference_mapping_blocks
 from .block import reference_deletion_blocks
 

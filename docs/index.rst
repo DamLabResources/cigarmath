@@ -9,7 +9,7 @@ Welcome to Cigar Math's documentation!
    installation
    usage
    rearrangements
-   modules
+   api
    contributing
    authors
    history

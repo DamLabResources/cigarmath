@@ -23,29 +23,39 @@ you through the process.
 .. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
 
 
+Optional dependencies
+---------------------
+
+To use SAM/BAM file I/O via ``cigarmath.io``, install with the ``io`` extra:
+
+.. code-block:: console
+
+    $ pip install cigarmath[io]
+
+This installs `pysam`_, which requires a Unix-like system (Linux or macOS).
+
+.. _pysam: https://pysam.readthedocs.io
+
+
 From sources
 ------------
 
 The sources for Cigar Math can be downloaded from the `Github repo`_.
 
-You can either clone the public repository:
-
 .. code-block:: console
 
-    $ git clone git://github.com/judowill/cigarmath
-
-Or download the `tarball`_:
-
-.. code-block:: console
-
-    $ curl -OJL https://github.com/judowill/cigarmath/tarball/master
+    $ git clone https://github.com/DamLabResources/cigarmath.git
 
 Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    $ python setup.py install
+    $ pip install .
 
+Or with optional dependencies:
 
-.. _Github repo: https://github.com/judowill/cigarmath
-.. _tarball: https://github.com/judowill/cigarmath/tarball/master
+.. code-block:: console
+
+    $ pip install ".[io]"
+
+.. _Github repo: https://github.com/DamLabResources/cigarmath
