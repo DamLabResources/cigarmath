@@ -9,6 +9,7 @@ from typing import Iterator, Optional, Tuple
 from cigarmath.defn import CigarTuples
 from cigarmath.iterators import cigar_iterator
 
+
 def reference2query(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[Optional[int]]:
     """Create a generator the same size as the reference alignment
     that maps positions in the reference to positions in the query.
@@ -79,6 +80,5 @@ def query2cigar(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[
         if cig_index.query_index is not None:
             yield (cig_index.cigar_index, cig_index.cigar_block_index)
 
-            
-    
+
 # Copyright (C) 2022-present, Dampier & DV Klopfenstein, PhD. All rights reserved

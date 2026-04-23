@@ -10,6 +10,7 @@ from cigarmath.defn import (
     BAM_CREF_SKIP,
 )
 
+
 def depth(
     cigartuples: CigarTuples,
     reference_start: int = 0,
@@ -17,16 +18,16 @@ def depth(
     previous_count: Optional[Dict[int, Counter]] = None,
 ) -> Dict[int, Counter]:
     """Calculate the pileup depth at each reference position.
-    
+
     Args:
         cigartuples: List of CIGAR operations and their lengths
         reference_start: Starting position on reference (default: 0)
         query_sequence: Query sequence string (default: None, will use '.' for bases)
         previous_count: Previous pileup counts to update (default: None)
-    
+
     Returns:
         Dict mapping reference positions to Counter of bases at that position
-        
+
     Example::
 
         REF:   AAAAGACC--CCC
@@ -51,11 +52,11 @@ def depth(
     counts = defaultdict(Counter)
     if previous_count is not None:
         counts.update(previous_count)
-        
+
     # Track current positions
     ref_pos = reference_start
     query_pos = 0
-    
+
     for op, length in cigartuples:
         # Handle operations that consume reference
         if op in CONSUMES_REFERENCE:
@@ -75,5 +76,5 @@ def depth(
         # Handle insertions (don't advance ref_pos)
         elif op in CONSUMES_QUERY:
             query_pos += length
-            
-    return counts 
+
+    return counts

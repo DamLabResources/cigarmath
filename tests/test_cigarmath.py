@@ -37,9 +37,6 @@ def test_cigarstr2tuples():
     check_cigartuples(guess, correct)
 
 
-
-
-
 def test_simplify_blocks():
     "Test collapsing adjacent cigar blocks of the same type"
 

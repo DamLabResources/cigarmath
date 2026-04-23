@@ -16,17 +16,21 @@ NTO = namedtuple("CigarLetter", "Op desc consumes_query consumes_ref")
 #              ---   -----------------------------------------------------  ------ -----
 NTS = [
     NTO._make(
-        ["M", "alignment match (can be a sequence match or mismatch)", True, True]
+        ["M",
+            "alignment match (can be a sequence match or mismatch)", True, True]
     ),
     NTO._make(["I", "insertion to the reference", True, False]),
     NTO._make(["D", "deletion form the reference", False, True]),
     NTO._make(["N", "skipped region from the reference", False, True]),
-    NTO._make(["S", "soft clipping (clipped sequences present in SEQ)", True, False]),
     NTO._make(
-        ["H", "hard clipping (clipped sequences NOT present in SEQ)", False, False]
+        ["S", "soft clipping (clipped sequences present in SEQ)", True, False]),
+    NTO._make(
+        ["H",
+            "hard clipping (clipped sequences NOT present in SEQ)", False, False]
     ),
     NTO._make(
-        ["P", "padding (silent deletion from the padded reference)", False, False]
+        ["P", "padding (silent deletion from the padded reference)",
+         False, False]
     ),
     NTO._make(["=", "sequnce match", True, True]),
     NTO._make(["X", "sequence mismatch", True, True]),
@@ -41,7 +45,8 @@ NTS = [
 ]
 
 NtoRQC = namedtuple("CigRQC", "Op consumes_ref consumes_query")
-NTS_RQC = [NtoRQC._make([nt.Op, nt.consumes_ref, nt.consumes_query]) for nt in NTS]
+NTS_RQC = [NtoRQC._make([nt.Op, nt.consumes_ref, nt.consumes_query])
+           for nt in NTS]
 
 
 def get_ntrqc_qty(cigartuples):
@@ -73,10 +78,10 @@ def cigarstr2tup(cigarstring):
         return None
     cigartuples = []
     pta = 0
-    ##print(f'CIGAR({cigarstring})')
+    # print(f'CIGAR({cigarstring})')
     for idx, letter in enumerate(cigarstring):
         if letter in CIGAR_SET:
-            ##print(f'LETTER({letter}) VAL({cigarstring[pta:idx]})')
+            # print(f'LETTER({letter}) VAL({cigarstring[pta:idx]})')
             cigartuples.append((CIGAR2BAM[letter], int(cigarstring[pta:idx])))
             pta = idx + 1
     return cigartuples

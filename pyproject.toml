@@ -60,6 +60,9 @@ addopts = "--ignore=setup.py"
 
 [tool.flake8]
 exclude = ["docs"]
+extend-exclude = [".ipynb_checkpoints"]
+max-line-length = 120
+extend-ignore = ["W291"]
 
 [tool.bumpversion]
 current_version = "0.2.3"

@@ -33,7 +33,6 @@ from .conversions import segments_to_binary
 from .conversions import cigartuples2pairs
 
 from .conversions import msa2cigartuples
-from .conversions import softclipify
 
 from .cigarmath import collapse_adjacent_blocks
 
@@ -56,3 +55,43 @@ from .rearrangement import format_read_rearrangement_summary
 from .rearrangement import rearrangement_segment_stream
 from .rearrangement import reference_lengths_from_pysam_header
 from .rearrangement import RearrangementEvent
+
+__all__ = [
+    "left_clipping",
+    "right_clipping",
+    "declip",
+    "is_hard_clipped",
+    "softclipify",
+    "reference_offset",
+    "reference_block",
+    "query_start",
+    "query_offset",
+    "query_block",
+    "block_overlap_length",
+    "reference_mapping_blocks",
+    "reference_deletion_blocks",
+    "inferred_query_sequence_length",
+    "inferred_reference_length",
+    "cigarstr2tup",
+    "cigartup2str",
+    "io",
+    "segments_to_binary",
+    "cigartuples2pairs",
+    "msa2cigartuples",
+    "collapse_adjacent_blocks",
+    "reference2query",
+    "query2reference",
+    "cigar_iterator",
+    "cigar_iterator_reference_slice",
+    "liftover",
+    "iterator_attach",
+    "combine_multiple_alignments",
+    "combine_adjacent_alignments",
+    "trim_alignment",
+    "depth",
+    "infer_rearrangements",
+    "format_read_rearrangement_summary",
+    "rearrangement_segment_stream",
+    "reference_lengths_from_pysam_header",
+    "RearrangementEvent",
+]

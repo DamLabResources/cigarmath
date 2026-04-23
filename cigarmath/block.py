@@ -17,6 +17,7 @@ from cigarmath.defn import (
 )
 from cigarmath.clipping import left_clipping
 
+
 def reference_offset(cigartuples: CigarTuples) -> int:
     """Calculate the length of the reference mapping block based on cigartuples.
 
@@ -99,7 +100,7 @@ def query_start(cigartuples: CigarTuples) -> int:
         query_start(cigartuples)
         3
     """
-    
+
     return left_clipping(cigartuples)
 
 
@@ -156,8 +157,8 @@ def block_overlap_length(block_a: Tuple[int, int], block_b: Tuple[int, int]) -> 
 
 
 def reference_mapping_blocks(
-    cigartuples: CigarTuples, 
-    reference_start: int = 0, 
+    cigartuples: CigarTuples,
+    reference_start: int = 0,
     deletion_split: int = 10
 ) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of mapped sites split by deletions.
@@ -173,22 +174,22 @@ def reference_mapping_blocks(
         (3, 16)
         (22, 26)
     """
-    
+
     del_ops = {BAM_CDEL, BAM_CREF_SKIP}
-    
+
     left, right = reference_start, reference_start
     for op, sz in cigartuples:
         if (op in del_ops) and (sz >= deletion_split):
             yield (left, right)
             left = right + sz
         right += sz * (op in CONSUMES_REFERENCE)
-        
+
     yield left, right
 
 
 def reference_deletion_blocks(
-    cigartuples: CigarTuples, 
-    reference_start: int = 0, 
+    cigartuples: CigarTuples,
+    reference_start: int = 0,
     min_size: int = 1
 ) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size

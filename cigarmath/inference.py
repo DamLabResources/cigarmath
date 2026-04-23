@@ -11,6 +11,7 @@ from cigarmath.defn import (
     CONSUMES_REFERENCE
 )
 
+
 def inferred_query_sequence_length(cigartuples: CigarTuples) -> int:
     """Returns the expected length of query_sequence based on cigartuples
 

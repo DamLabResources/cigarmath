@@ -5,21 +5,6 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import (
-    BAM_CSOFT_CLIP,
-    BAM_CHARD_CLIP,
-    NTS,
-    BAM_CDEL,
-    BAM_CREF_SKIP,
-    CIGAR_HDRS,
-    CIGAR2BAM,
-    CONSUMES_REFERENCE,
-    CONSUMES_QUERY,
-)
-
-
-
-
 
 def simplify_blocks(cigartuples, collapse=True):
     """Replace extended cigars (= and X) with M.

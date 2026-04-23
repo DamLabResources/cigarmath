@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     except ImportError:
         pass
 
+
 def segment_stream_pysam(
     path: str,
     mode: str = 'rt',
@@ -33,13 +34,13 @@ def segment_stream_pysam(
 
     with pysam.AlignmentFile(path, mode, check_sq=False) as samfile:
         iterable = samfile
-        
+
         if fetch:
             iterable = iterable.fetch(fetch)
-            
+
         if downsample:
             iterable = _downsample(iterable, downsample)
-        
+
         for segment in iterable:
             if segment.mapping_quality > min_mapq:
                 if as_tuples:
@@ -56,12 +57,13 @@ def _downsample(stream: Iterator, frac: float) -> Iterator:
             yield item
 
 
-def _combine_aligned_segments(segments: Iterator) ->Tuple[int, CigarTuples, List]:
+def _combine_aligned_segments(segments: Iterator) -> Tuple[int, CigarTuples, List]:
     """Combine aligned segments into a single alignment."""
-    
+
     segments = list(segments)
     try:
-        packed = [(segment.reference_start, segment.cigartuples) for segment in segments]
+        packed = [(segment.reference_start, segment.cigartuples)
+                  for segment in segments]
         new_start, new_cigars = combine_multiple_alignments(packed)
     except ValueError:
         return None, None, segments
@@ -75,6 +77,7 @@ def _get_primary_segment(segments: List):
             return segment
     return segments[0]
 
+
 def combined_segment_stream(segments: Iterator) -> Iterator[Tuple[int, CigarTuples, List]]:
     """Combine aligned segments into a single alignment."""
 
@@ -84,12 +87,11 @@ def combined_segment_stream(segments: Iterator) -> Iterator[Tuple[int, CigarTupl
         segments = list(segments)
         if len(segments) > 1:
             try:
-                new_start, new_cigars, segments = _combine_aligned_segments(segments)
+                new_start, new_cigars, segments = _combine_aligned_segments(
+                    segments)
                 yield (new_start, new_cigars, segments)
             except ValueError:
                 primary = _get_primary_segment(segments)
                 yield (primary.reference_start, primary.cigartuples, segments)
         else:
             yield (segments[0].reference_start, segments[0].cigartuples, segments)
-
-    
