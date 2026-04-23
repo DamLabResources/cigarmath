@@ -7,6 +7,7 @@ Welcome to Cigar Math's documentation!
 
    readme
    installation
+   cigar
    usage
    rearrangements
    api
