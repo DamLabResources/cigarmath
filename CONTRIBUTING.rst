@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/judowill/cigarmath/issues.
+Report bugs at https://github.com/DamLabResources/cigarmath/issues.
 
 If you are reporting a bug, please include:
 
