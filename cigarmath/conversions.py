@@ -37,18 +37,20 @@ def segments_to_binary(
     mapping: Optional[List[bool]] = None
 ) -> List[bool]:
     """Given a list of segments create a binary array of all covered regions.
-    
-    POS0    000000000011111111112222222222333333333
-    POS1    012345678901234567890123456789012345678
-    REF     AAAAGACCCCCGACTAGCTAGCATGCTATCTAGCTAGCA
-    QRY1    AAAAGA-----GAC      
-    QRY2                           TGCTA---AGCTAG
-    RES     111111000001110000000001111111111111100
-    
-    alns = [(0, '6M5D3M'),
-            (23, '5M3D6M')]
-    
-    >> segments_to_binary(alns, max_genome_size=38, deletion_size=4)
+
+    Example::
+
+        POS0    000000000011111111112222222222333333333
+        POS1    012345678901234567890123456789012345678
+        REF     AAAAGACCCCCGACTAGCTAGCATGCTATCTAGCTAGCA
+        QRY1    AAAAGA-----GAC
+        QRY2                           TGCTA---AGCTAG
+        RES     111111000001110000000001111111111111100
+
+        alns = [(0, "6M5D3M"),
+                (23, "5M3D6M")]
+
+        segments_to_binary(alns, max_genome_size=38, deletion_size=4)
     """
     
     if mapping is None:
@@ -113,14 +115,16 @@ def cigartuples2pairs(
 
 def msa2cigartuples(ref_msa: MSA, query_msa: MSA) -> Tuple[int, CigarTuples]:
     """Given a pair of multiple-sequence alignments return reference_start and cigartuples.
-    
-    REF     AAAAGACCCCCGACTAGCTAGCATGCT----ATCTAGCTAGCA
-    QRY     ----AACCCCCGAC----TAGCATGCTTTTTATCTAGCT----
-    CIGAR       MMMMMMMMMMDDDDMMMMMMMMIIIIIMMMMMMMM
-    
-    >> ref_start, cigartuples = msa2cigartuples(ref_msa, query_msa)
-    ref_start = 4
-    cigartuples = [(0, 10), (2, 4), (0, 9), (1, 4), (0, 8)]
+
+    Example::
+
+        REF     AAAAGACCCCCGACTAGCTAGCATGCT----ATCTAGCTAGCA
+        QRY     ----AACCCCCGAC----TAGCATGCTTTTTATCTAGCT----
+        CIGAR       MMMMMMMMMMDDDDMMMMMMMMIIIIIMMMMMMMM
+
+        ref_start, cigartuples = msa2cigartuples(ref_msa, query_msa)
+        ref_start = 4
+        cigartuples = [(0, 10), (2, 4), (0, 9), (1, 4), (0, 8)]
     """
     
     assert len(ref_msa) == len(query_msa)

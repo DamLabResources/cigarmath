@@ -22,13 +22,15 @@ T = TypeVar('T')  # For generic types in declip function
 def left_clipping(cigartuples: CigarTuples, with_hard: bool = True) -> int:
     """Returns the length of clipped bases (hard or soft) on the left side of the alignment
 
-    REF     AAAAACCCCC
-    QRY  TTTAAAAACCCCCGGGG
-    CGS  SSSMMMMMMMMMMSSSS
-    CGT  3S 10M       4S
+    Example::
 
-    >>> left_clipping(cigartuples)
-    3
+        REF     AAAAACCCCC
+        QRY  TTTAAAAACCCCCGGGG
+        CGS  SSSMMMMMMMMMMSSSS
+        CGT  3S 10M       4S
+
+        left_clipping(cigartuples)
+        3
     """
     soft = cigartuples[0][0] == BAM_CSOFT_CLIP
     hard = cigartuples[0][0] == BAM_CHARD_CLIP
@@ -40,13 +42,15 @@ def left_clipping(cigartuples: CigarTuples, with_hard: bool = True) -> int:
 def right_clipping(cigartuples: CigarTuples, with_hard: bool = True) -> int:
     """Returns the length of clipped bases (hard or soft) on the right side of the alignment
 
-    REF     AAAAACCCCC
-    QRY  TTTAAAAACCCCCGGGG
-    CGS  SSSMMMMMMMMMMSSSS
-    CGT  3S 10M       4S
+    Example::
 
-    >>> right_clipping(cigartuples)
-    4
+        REF     AAAAACCCCC
+        QRY  TTTAAAAACCCCCGGGG
+        CGS  SSSMMMMMMMMMMSSSS
+        CGT  3S 10M       4S
+
+        right_clipping(cigartuples)
+        4
     """
     soft = cigartuples[-1][0] == BAM_CSOFT_CLIP
     hard = cigartuples[-1][0] == BAM_CHARD_CLIP
@@ -58,21 +62,23 @@ def right_clipping(cigartuples: CigarTuples, with_hard: bool = True) -> int:
 def declip(cigartuples: CigarTuples, *args: T) -> CigarTuples:
     """Return a set of cigartuples with clipping removed, if any.
 
-    REF     AAAAACCCCC
-    QRY  TTTAAAAACCCCCGGGG
-    CGS  SSSMMMMMMMMMMSSSS
-    CGT  3S 10M       4S
+    Examples::
 
-    >>>> declip(cigartuples)
-    (0, 10)
-    
-    You can also provide sequences or lists as extra *args
-    which will be clipped based on the tuples.
-    
-    >>>> seq = 'TTTAAAAACCCCCGGGG'
-    >>>> tups, clipped_seq = declip(cigartuples, seq)
-    (0, 10)
-    AAAAACCCCC
+        REF     AAAAACCCCC
+        QRY  TTTAAAAACCCCCGGGG
+        CGS  SSSMMMMMMMMMMSSSS
+        CGT  3S 10M       4S
+
+        declip(cigartuples)
+        (0, 10)
+
+        seq = "TTTAAAAACCCCCGGGG"
+        tups, clipped_seq = declip(cigartuples, seq)
+        (0, 10)
+        AAAAACCCCC
+
+    You can also provide sequences or lists as extra ``*args``, which will be
+    clipped based on the tuples.
     """
     left_clip = (cigartuples[0][0] == BAM_CSOFT_CLIP) | (
         cigartuples[0][0] == BAM_CHARD_CLIP
@@ -97,13 +103,15 @@ def declip(cigartuples: CigarTuples, *args: T) -> CigarTuples:
 def is_hard_clipped(cigartuples: CigarTuples) -> bool:
     """Return True if the cigar indicates HARD clipping
 
-    REF     AAAAACCCCC
-    QRY     AAAAACCCCC
-    CGS  HHHMMMMMMMMMMHHHH
-    CGT  3H 10M       4H
+    Example::
 
-    >>>> is_hard_clipped(cigartuples)
-    True
+        REF     AAAAACCCCC
+        QRY     AAAAACCCCC
+        CGS  HHHMMMMMMMMMMHHHH
+        CGT  3H 10M       4H
+
+        is_hard_clipped(cigartuples)
+        True
     """
     return (cigartuples[0][0] == BAM_CHARD_CLIP) or (
         cigartuples[-1][0] == BAM_CHARD_CLIP
@@ -112,13 +120,15 @@ def is_hard_clipped(cigartuples: CigarTuples) -> bool:
 
 def softclipify(cigartuples: CigarTuples, required_mapping: int = 1) -> Tuple[CigarTuples, int]:
     """Converts initial and final cigars into softclips
-    
-    REF    --AAAAGACCCCCGACTCGTTA---
-    QUE    TT----AACCCCCGAC----TAGCA
-    CIG    IIDDDDMMMMMMMMMMDDDDMMIII
-        
-    OUT    SS    MMMMMMMMMMDDDDMMSSS required_mapping = 1
-    OUT    SS    MMMMMMMMMM    SSSSS required_mapping = 4
+
+    Example::
+
+        REF    --AAAAGACCCCCGACTCGTTA---
+        QUE    TT----AACCCCCGAC----TAGCA
+        CIG    IIDDDDMMMMMMMMMMDDDDMMIII
+
+        OUT    SS    MMMMMMMMMMDDDDMMSSS required_mapping = 1
+        OUT    SS    MMMMMMMMMM    SSSSS required_mapping = 4
     """
     left_ind, left_soft_sz = _decide_softclip_end(cigartuples, required_mapping)
     right_ind, right_soft_sz = _decide_softclip_end(cigartuples[::-1], required_mapping)
@@ -139,13 +149,15 @@ def softclipify(cigartuples: CigarTuples, required_mapping: int = 1) -> Tuple[Ci
 
 def _decide_softclip_end(cigartuples: CigarTuples, required_mapping: int) -> Tuple[Union[int, None], Union[int, None]]:
     """Helper function to search cigartuples until you find a MAPPING block of a particular size.
-    
-    REF    --AAAAGACCCCCGACTCGTTA---
-    QUE    TT----AACCCCCGAC----TAGCA
-    CIG    IIDDDDMMMMMMMMMMDDDDMMIII 
-    
-    cigartuples = [(BAM_CINS, 2), (BAM_CDEL, 4), (BAM_CMATCH, 10), 
-                   (BAM_CDEL, 4), (BAM_CMATCH, 2), (BAM_CINS, 3)]
+
+    Example::
+
+        REF    --AAAAGACCCCCGACTCGTTA---
+        QUE    TT----AACCCCCGAC----TAGCA
+        CIG    IIDDDDMMMMMMMMMMDDDDMMIII
+
+        cigartuples = [(BAM_CINS, 2), (BAM_CDEL, 4), (BAM_CMATCH, 10),
+                       (BAM_CDEL, 4), (BAM_CMATCH, 2), (BAM_CINS, 3)]
     """
     MAPPING_OP = set([BAM_CMATCH, BAM_CEQUAL, BAM_CDIFF])
     

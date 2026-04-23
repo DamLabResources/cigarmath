@@ -35,19 +35,20 @@ class CigarIndex:
 
 def cigar_iterator(cigartuples: CigarTuples, reference_start: int = 0) -> Iterator[CigarIndex]:
     """Yields alignment, query, reference, and cigar indexes in alignment order.
-    
-    ALNPOS   01234567890 # Index of the entire alignment
-    RPOS    0123  456789 # Index within the reference
-    REF     AAGA--CTTCGG
-    CIGAR    SMMIIMDDMSS
-    CIGIND   01122344566 # Index of the cigar block
-    CBLKIND  001010010   # Index within the cigar block
-    QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query  
-    
-    
-    for cigar_index in cigar_iterator(cigartuples, reference_start = 2):
-        print(cigar_index)
+
+    Example::
+
+        ALNPOS   01234567890  # Index of the entire alignment
+        RPOS    0123  456789  # Index within the reference
+        REF     AAGA--CTTCGG
+        CIGAR    SMMIIMDDMSS
+        CIGIND   01122344566  # Index of the cigar block
+        CBLKIND  001010010    # Index within the cigar block
+        QRY     -xAAGGC--Cxx
+        QPOS     012345  678  # Index within the query
+
+        for cigar_index in cigar_iterator(cigartuples, reference_start=2):
+            print(cigar_index)
     """
     
     if cigartuples[0][0] in CLIPPING:

@@ -27,23 +27,24 @@ def depth(
     Returns:
         Dict mapping reference positions to Counter of bases at that position
         
-    Example:
-        REF:     AAAAGACC--CCC
-        QRY:     AAAA-ACCGGCCC
+    Example::
+
+        REF:   AAAAGACC--CCC
+        QRY:   AAAA-ACCGGCCC
         CIGAR: 4M1D3M2I3M
-        
-        >>> depth([(0,4), (2,1), (0,3), (1,2), (0,3)], query_sequence="AAAAACCGGCCC")
+
+        depth([(0, 4), (2, 1), (0, 3), (1, 2), (0, 3)], query_sequence="AAAAACCGGCCC")
         {
-            0: Counter({'A': 1}),
-            1: Counter({'A': 1}),
-            2: Counter({'A': 1}),
-            3: Counter({'A': 1}),
-            4: Counter({'-': 1}),  # Deletion
-            5: Counter({'A': 1}),
-            6: Counter({'C': 1}),
-            7: Counter({'C': 1}),
-            8: Counter({'C': 1}),
-            9: Counter({'C': 1}),
+            0: Counter({"A": 1}),
+            1: Counter({"A": 1}),
+            2: Counter({"A": 1}),
+            3: Counter({"A": 1}),
+            4: Counter({"-": 1}),  # Deletion
+            5: Counter({"A": 1}),
+            6: Counter({"C": 1}),
+            7: Counter({"C": 1}),
+            8: Counter({"C": 1}),
+            9: Counter({"C": 1}),
         }
     """
     # Initialize counts or use previous

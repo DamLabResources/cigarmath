@@ -20,18 +20,22 @@ def combine_adjacent_alignments(
     Returns:
         Tuple of (reference_start, combined_cigartuples)
         
-    Example:
-        First alignment: REF: AAAAGATC--CCC  (ref_start=4)
-                         QRY: AAAA-ATCGGCCC
-                         CGT: 4M1D3M2I3M
-                         
-        Second alignment:REF:        CCCTAG  (ref_start=12) 
-                         QRY:         CCTAG
-                         CGT:         3M2M
-                         
-        Combined:        REF: AAAAGATC--CCCCCTAG
-                        QRY: AAAA-ATCGGCCCCCTAG  
-                        CGT: 4M1D3M2I6M2M
+    Example::
+
+        First alignment:
+            REF: AAAAGATC--CCC  (ref_start=4)
+            QRY: AAAA-ATCGGCCC
+            CGT: 4M1D3M2I3M
+
+        Second alignment:
+            REF:        CCCTAG  (ref_start=12)
+            QRY:         CCTAG
+            CGT:         3M2M
+
+        Combined:
+            REF: AAAAGATC--CCCCCTAG
+            QRY: AAAA-ATCGGCCCCCTAG
+            CGT: 4M1D3M2I6M2M
     """
     first_start, first_cigars = first[0], declip(first[1])
     second_start, second_cigars = second[0], declip(second[1])
@@ -156,14 +160,15 @@ def trim_alignment(
     Returns:
         Tuple of (new_ref_start, trimmed_cigartuples)
         
-    Example:
+    Example::
+
         ref_start = 10
-        cigartuples = [(0,5), (2,1), (0,3)]  # 5M1D3M
+        cigartuples = [(0, 5), (2, 1), (0, 3)]  # 5M1D3M
         left = 2
         right = 1
-        add_clipping = 'soft'
-        
-        Returns: (12, [(4,2), (0,3), (2,1), (0,2), (4,1)])  # 2S3M1D2M1S
+        add_clipping = "soft"
+
+        Returns: (12, [(4, 2), (0, 3), (2, 1), (0, 2), (4, 1)])  # 2S3M1D2M1S
     """
     if (left == 0) and (right == 0):
         return ref_start, cigartuples
@@ -209,15 +214,16 @@ def combine_multiple_alignments(
     Raises:
         ValueError: If alignments overlap more than allowed or are not sequential
         
-    Example:
+    Example::
+
         alignments = [
-            (10, [(0,5), (2,2), (0,3)]),  # 5M2D3M at ref:10
-            (25, [(0,4), (1,2), (0,2)]),  # 4M2I2M at ref:25
-            (35, [(0,5)])                  # 5M at ref:35
+            (10, [(0, 5), (2, 2), (0, 3)]),  # 5M2D3M at ref:10
+            (25, [(0, 4), (1, 2), (0, 2)]),  # 4M2I2M at ref:25
+            (35, [(0, 5)]),                   # 5M at ref:35
         ]
         allowed_overlap = 2
-        
-        Returns: (10, [(0,5), (2,2), (0,7), (1,2), (0,7)])
+
+        Returns: (10, [(0, 5), (2, 2), (0, 7), (1, 2), (0, 7)])
     """
     if not alignments:
         raise ValueError("No alignments provided")
