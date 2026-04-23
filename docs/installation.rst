@@ -37,6 +37,18 @@ This installs `pysam`_, which requires a Unix-like system (Linux or macOS).
 .. _pysam: https://pysam.readthedocs.io
 
 
+Development install
+-------------------
+
+To work on Cigar Math locally (tests, linting, docs tooling), install the
+``dev`` extra. This is the supported way to get a consistent developer
+environment (CI, tox, and Read the Docs use the same dependency groups).
+
+.. code-block:: console
+
+    $ pip install -e ".[dev,io]"
+
+
 From sources
 ------------
 
@@ -56,6 +68,6 @@ Or with optional dependencies:
 
 .. code-block:: console
 
-    $ pip install ".[io]"
+    $ pip install ".[dev,io]"
 
 .. _Github repo: https://github.com/DamLabResources/cigarmath

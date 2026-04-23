@@ -1,9 +1,10 @@
 """Top-level package for Cigar Math."""
 
+import importlib.metadata
+import importlib.util
+
 __author__ = """Will Dampier"""
 __email__ = "wnd22@drexel.edu"
-__version__ = "0.2.0"
-
 
 from .clipping import left_clipping
 from .clipping import right_clipping
@@ -56,6 +57,18 @@ from .rearrangement import rearrangement_segment_stream
 from .rearrangement import reference_lengths_from_pysam_header
 from .rearrangement import RearrangementEvent
 
+
+def _read_runtime_version() -> str:
+    try:
+        return importlib.metadata.version("cigarmath")
+    except importlib.metadata.PackageNotFoundError:
+        if importlib.util.find_spec("cigarmath") is not None:
+            return "0.0.0+uninstalled"
+        raise
+
+
+__version__ = _read_runtime_version()
+
 __all__ = [
     "left_clipping",
     "right_clipping",
@@ -94,4 +107,5 @@ __all__ = [
     "rearrangement_segment_stream",
     "reference_lengths_from_pysam_header",
     "RearrangementEvent",
+    "__version__",
 ]

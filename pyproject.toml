@@ -33,11 +33,14 @@ dependencies = []
 [project.optional-dependencies]
 io = ["pysam"]
 dev = [
-    "bump2version",
+    "pip",
     "wheel",
+    "build",
+    "tox",
+    "watchdog",
     "flake8",
     "coverage",
-    "sphinx",
+    "Sphinx",
     "sphinx-rtd-theme",
     "sphinx-autodoc-typehints",
     "twine",
@@ -56,25 +59,9 @@ Repository = "https://github.com/DamLabResources/cigarmath"
 include = ["cigarmath", "cigarmath.*"]
 
 [tool.pytest.ini_options]
-addopts = "--ignore=setup.py"
 
 [tool.flake8]
 exclude = ["docs"]
 extend-exclude = [".ipynb_checkpoints"]
 max-line-length = 120
 extend-ignore = ["W291"]
-
-[tool.bumpversion]
-current_version = "0.2.3"
-commit = true
-tag = true
-
-[[tool.bumpversion.files]]
-filename = "pyproject.toml"
-search = 'version = "{current_version}"'
-replace = 'version = "{new_version}"'
-
-[[tool.bumpversion.files]]
-filename = "cigarmath/__init__.py"
-search = '__version__ = "{current_version}"'
-replace = '__version__ = "{new_version}"'
