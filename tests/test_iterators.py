@@ -107,7 +107,7 @@ def test_cigar_iterator():
     CIGIND   01122344566 # Index of the cigar block
     CBLKIND  001010010   # Index within the cigar block
     QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query 
+    QPOS     012345  678 # Index within the query
     """
 
     cigartups, ref_start, correct_indexes = make_example()
@@ -154,7 +154,7 @@ def test_iterator_attach():
     CIGIND   01122344566 # Index of the cigar block
     CBLKIND  001010010   # Index within the cigar block
     QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query 
+    QPOS     012345  678 # Index within the query
     """
 
     cigartups, ref_start, correct_indexes = make_example()
@@ -188,7 +188,7 @@ def test_liftover():
     CIGIND   01122344566 # Index of the cigar block
     CBLKIND  001010010   # Index within the cigar block
     QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query 
+    QPOS     012345  678 # Index within the query
     """
 
     cigartups, ref_start, _ = make_example()

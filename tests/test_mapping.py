@@ -6,9 +6,9 @@ def test_reference2query():
     REF     AAGA--CTTCGG
     CIGAR    SMMIIMDDMSS
     QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query 
+    QPOS     012345  678 # Index within the query
 
-    r2q =     12  5NN6  
+    r2q =     12  5NN6
 
     cigarstring = 1S2M2I1M2D1M2S
     reference_start = 2
@@ -30,8 +30,8 @@ def test_query2reference():
     REF     AAGA--CTTCGG
     CIGAR    SMMIIMDDMSS
     QRY     -xAAGGC--Cxx
-    QPOS     012345  678 # Index within the query 
-    q2r =    N23NN4  7NN  
+    QPOS     012345  678 # Index within the query
+    q2r =    N23NN4  7NN
 
     cigarstring = 1S2M2I1M2D1M2S
     reference_start = 2

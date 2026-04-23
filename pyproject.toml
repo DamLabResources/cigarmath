@@ -64,4 +64,3 @@ include = ["cigarmath", "cigarmath.*"]
 exclude = ["docs"]
 extend-exclude = [".ipynb_checkpoints"]
 max-line-length = 120
-extend-ignore = ["W291"]
