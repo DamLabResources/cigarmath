@@ -5,14 +5,17 @@ from collections import Counter, namedtuple
 import pytest
 
 import cigarmath as cm
-from cigarmath.block import query_block
-from cigarmath.clipping import right_clipping
 from cigarmath.defn import cigarstr2tup
+from cigarmath.inference import inferred_query_sequence_length
 from cigarmath.rearrangement import (
+    format_read_rearrangement_summary,
     infer_rearrangements,
     rearrangement_segment_stream,
+    reference_lengths_from_pysam_header,
     RearrangementEvent,
 )
+
+HXB2F_LEN = 9086
 
 CHR1 = "chr1"
 CHR2 = "chr7"
@@ -31,7 +34,7 @@ FakeSegment = namedtuple(
 
 def _inferred_query_length(cigartuples):
     """Total read length implied by one supplementary alignment record."""
-    return query_block(cigartuples)[1] + right_clipping(cigartuples)
+    return inferred_query_sequence_length(cigartuples)
 
 
 def _mapping(ref_name, ref_start, is_reverse, cigar):
@@ -163,6 +166,27 @@ def test_detect_duplication():
     assert len(events) == 1
     assert events[0].event_type == "DUP"
     assert events[0].reference_size == -200
+
+
+def test_detect_ref_wrap_genomic():
+    """Late-genome segment then proximal terminus (HIV linear-ref pattern)."""
+    read_len = 6700
+    mappings = [
+        _reverse_split("HXB2F", 2102, query_start=47, aligned_length=6480, read_len=read_len),
+        _reverse_split("HXB2F", 54, query_start=6571, aligned_length=126, read_len=read_len),
+    ]
+    _assert_uniform_read_length(mappings)
+    ref_lengths = {"HXB2F": HXB2F_LEN}
+    events = infer_rearrangements(
+        mappings,
+        max_breakpoint_distance=1000,
+        min_segment_length=50,
+        min_event_size=30,
+        reference_lengths=ref_lengths,
+    )
+    assert len(events) == 1
+    assert events[0].event_type == "REF_WRAP"
+    assert events[0].reference_size == 54 - 8582
 
 
 def test_detect_translocation():
@@ -354,11 +378,15 @@ def test_rearrangement_segment_stream_test_sam():
     pysam = pytest.importorskip("pysam")
 
     test_sam = "tests/test_data/test.sam"
+    with pysam.AlignmentFile(test_sam, "r") as handle:
+        ref_lengths = reference_lengths_from_pysam_header(handle.header)
     stream = sorted(
         cm.io.segment_stream_pysam(test_sam, mode="r"),
         key=lambda segment: segment.query_name,
     )
-    results = list(rearrangement_segment_stream(stream))
+    results = list(
+        rearrangement_segment_stream(stream, reference_lengths=ref_lengths)
+    )
 
     query_names = [query_name for query_name, _, _ in results]
     assert query_names == sorted(query_names)
@@ -368,10 +396,7 @@ def test_rearrangement_segment_stream_test_sam():
     assert len(reads_with_events) == 49
 
     event_counts = Counter(event.event_type for _, events, _ in results for event in events)
-    assert event_counts == Counter({"INV": 8, "DEL": 38, "DUP": 5})
-
-    for query_name, events, segments in reads_with_events:
-        print(query_name, events, segments)
+    assert event_counts == Counter({"INV": 8, "DEL": 38, "REF_WRAP": 5})
 
     query_name, events, segments = reads_with_events[0]
     event = events[0]
@@ -379,12 +404,212 @@ def test_rearrangement_segment_stream_test_sam():
     assert segments[event.segment_indices[0]].query_name == query_name
     assert segments[event.segment_indices[1]].query_name == query_name
 
-    for _, _, segments in results:
-        if len(segments) < 2:
-            continue
-        lengths = [
-            query_block(segment.cigartuples)[1] + right_clipping(segment.cigartuples)
+
+
+def test_format_summary_inversion_two_segment():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=100, aligned_length=400, read_len=read_len),
+        _reverse_split(CHR1, 1380, query_start=500, aligned_length=400, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=1)
+    summary = format_read_rearrangement_summary(
+        "inv2", mappings, events, min_segment_length=1
+    )
+    assert summary == (
+        "read inv2 len=1000 segments=2 events=1\n"
+        "[Clip] q[0, 100)\n"
+        "[S0 +] q[100,500) ref:chr1:1000-1400\n"
+        "[S1 -] q[500,900) ref:chr1:1380-1780 | INV ref -20\n"
+        "[Clip] q[900, 1000)"
+    )
+
+
+def test_format_summary_deletion():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=500, read_len=read_len),
+        _forward_split(CHR1, 11500, query_start=500, aligned_length=500, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=30)
+    summary = format_read_rearrangement_summary(
+        "del", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read del len=1000 segments=2 events=1\n"
+        "[S0 +] q[0,500) ref:chr1:1000-1500\n"
+        "[DEL] ref +10000 bp\n"
+        "[S1 +] q[500,1000) ref:chr1:11500-12000"
+    )
+
+
+def test_format_summary_insertion():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=500, read_len=read_len),
+        _forward_split(CHR1, 1500, query_start=600, aligned_length=400, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=30)
+    summary = format_read_rearrangement_summary(
+        "ins", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read ins len=1000 segments=2 events=1\n"
+        "[S0 +] q[0,500) ref:chr1:1000-1500\n"
+        "[INS] query +100 bp\n"
+        "[S1 +] q[600,1000) ref:chr1:1500-1900"
+    )
+
+
+def test_format_summary_duplication():
+    read_len = 3000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=1000, read_len=read_len),
+        _forward_split(CHR1, 1800, query_start=1000, aligned_length=1000, read_len=read_len),
+    ]
+    events = infer_rearrangements(
+        mappings,
+        max_breakpoint_distance=100,
+        min_segment_length=1,
+        min_event_size=30,
+    )
+    summary = format_read_rearrangement_summary(
+        "dup", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read dup len=3000 segments=2 events=1\n"
+        "[S0 +] q[0,1000) ref:chr1:1000-2000\n"
+        "[S1 +] q[1000,2000) ref:chr1:1800-2800 | DUP ref -200"
+    )
+
+
+def test_format_summary_translocation():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=400, read_len=read_len),
+        _forward_split(CHR2, 80000, query_start=500, aligned_length=400, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=1)
+    summary = format_read_rearrangement_summary(
+        "tra", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read tra len=1000 segments=2 events=1\n"
+        "[S0 +] q[0,400) ref:chr1:1000-1400\n"
+        "[S1 +] q[500,900) ref:chr7:80000-80400 | TRA query +100"
+    )
+
+
+def test_format_summary_mixed_events():
+    read_len = 2000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=300, read_len=read_len),
+        _reverse_split(CHR1, 1280, query_start=300, aligned_length=300, read_len=read_len),
+        _forward_split(CHR1, 1560, query_start=600, aligned_length=300, read_len=read_len),
+        _forward_split(CHR1, 12000, query_start=900, aligned_length=500, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=30)
+    summary = format_read_rearrangement_summary(
+        "mixed", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read mixed len=2000 segments=4 events=3\n"
+        "[S0 +] q[0,300) ref:chr1:1000-1300\n"
+        "[S1 -] q[300,600) ref:chr1:1280-1580 | INV ref -20\n"
+        "[S2 +] q[600,900) ref:chr1:1560-1860 | INV ref -20\n"
+        "[DEL] ref +10140 bp\n"
+        "[S3 +] q[900,1400) ref:chr1:12000-12500"
+    )
+
+
+def test_format_summary_clip_threshold():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=100, aligned_length=400, read_len=read_len),
+        _forward_split(CHR1, 1400, query_start=500, aligned_length=400, read_len=read_len),
+    ]
+    summary = format_read_rearrangement_summary(
+        "clean", mappings, [], min_segment_length=1, show_clip_threshold=30
+    )
+    assert "[Clip] q[0, 100)" in summary
+    assert "[Clip] q[900, 1000)" in summary
+
+    summary_high = format_read_rearrangement_summary(
+        "clean", mappings, [], min_segment_length=1, show_clip_threshold=200
+    )
+    assert "[Clip]" not in summary_high
+
+
+def test_format_summary_query_order_and_original_indices():
+    read_len = 1000
+    mappings = [
+        _forward_split(CHR1, 1000, query_start=0, aligned_length=300, read_len=read_len),
+        _reverse_split(CHR1, 1280, query_start=300, aligned_length=300, read_len=read_len),
+        _forward_split(CHR1, 1560, query_start=600, aligned_length=300, read_len=read_len),
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=1)
+    summary = format_read_rearrangement_summary(
+        "order", mappings, events, min_segment_length=1, show_clip_threshold=1000
+    )
+    lines = summary.splitlines()
+    segment_lines = [line for line in lines if line.startswith("[S")]
+    assert segment_lines == [
+        "[S0 +] q[0,300) ref:chr1:1000-1300",
+        "[S1 -] q[300,600) ref:chr1:1280-1580 | INV ref -20",
+        "[S2 +] q[600,900) ref:chr1:1560-1860 | INV ref -20",
+    ]
+
+    shuffled = [mappings[2], mappings[0], mappings[1]]
+    shuffled_events = infer_rearrangements(shuffled, min_segment_length=1, min_event_size=1)
+    shuffled_summary = format_read_rearrangement_summary(
+        "shuffled", shuffled, shuffled_events, min_segment_length=1, show_clip_threshold=1000
+    )
+    shuffled_segment_lines = [
+        line for line in shuffled_summary.splitlines() if line.startswith("[S")
+    ]
+    assert shuffled_segment_lines == [
+        "[S1 +] q[0,300) ref:chr1:1000-1300",
+        "[S2 -] q[300,600) ref:chr1:1280-1580 | INV ref -20",
+        "[S0 +] q[600,900) ref:chr1:1560-1860 | INV ref -20",
+    ]
+
+
+SAM_SUMMARY_ARTIFACT = "tests/test_data/.rearrangement_summaries_test_sam.txt"
+
+
+def test_write_test_sam_rearrangement_summaries_artifact():
+    """Write all read summaries for manual inspection (git-ignored)."""
+    pysam = pytest.importorskip("pysam")
+
+    test_sam = "tests/test_data/test.sam"
+    with pysam.AlignmentFile(test_sam, "r") as handle:
+        ref_lengths = reference_lengths_from_pysam_header(handle.header)
+    stream = sorted(
+        cm.io.segment_stream_pysam(test_sam, mode="r"),
+        key=lambda segment: segment.query_name,
+    )
+
+    blocks = []
+    for query_name, events, segments in rearrangement_segment_stream(
+        stream, reference_lengths=ref_lengths
+    ):
+        mappings = [
+            (
+                segment.reference_name,
+                segment.reference_start,
+                segment.is_reverse,
+                segment.cigartuples,
+            )
             for segment in segments
-            if segment.cigartuples
         ]
-        assert len(set(lengths)) == 1, f"{segments[0].query_name}: {lengths}"
+        blocks.append(
+            format_read_rearrangement_summary(query_name, mappings, events)
+        )
+
+    artifact_path = SAM_SUMMARY_ARTIFACT
+    content = "\n\n".join(blocks) + "\n"
+    with open(artifact_path, "w", encoding="utf-8") as handle:
+        handle.write(content)
+
+    assert content.strip()
+    assert content.count("read ") == 193

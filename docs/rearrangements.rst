@@ -9,8 +9,31 @@ summarizes how ``infer_rearrangements`` dispatches each segment pair.
    :alt: Rearrangement inference decision tree
    :align: center
 
-See :func:`cigarmath.rearrangement.infer_rearrangements` and
-:func:`cigarmath.rearrangement.rearrangement_segment_stream`.
+See :func:`cigarmath.rearrangement.infer_rearrangements`,
+:func:`cigarmath.rearrangement.rearrangement_segment_stream`,
+:func:`cigarmath.rearrangement.reference_lengths_from_pysam_header`, and
+:func:`cigarmath.rearrangement.format_read_rearrangement_summary`.
+
+When ``reference_lengths`` is supplied (e.g. from the SAM/BAM ``@SQ`` header),
+genome-scale negative reference overlap is classified as **REF_WRAP** (linear
+reference wrap) instead of tandem **DUP**.
+
+ASCII summary example::
+
+    >>> from cigarmath.rearrangement import infer_rearrangements, format_read_rearrangement_summary
+    >>> summary = format_read_rearrangement_summary(query_name, mappings, events)
+    >>> print(summary)
+    read my_read len=1000 segments=2 events=1
+    [Clip] q[0, 100)
+    [S0 +] q[100,500) ref:chr1:1000-1400
+    [S1 -] q[500,900) ref:chr1:1380-1780 | INV ref -20
+    [Clip] q[900, 1000)
+
+To regenerate a full-corpus artifact from the test SAM file::
+
+    pytest tests/test_rearrangement.py -k artifact
+
+Then open ``tests/test_data/.rearrangement_summaries_test_sam.txt`` (git-ignored).
 
 Diagram source
 --------------

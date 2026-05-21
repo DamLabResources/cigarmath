@@ -54,5 +54,7 @@ from .combine import trim_alignment
 from .pileup import depth
 
 from .rearrangement import infer_rearrangements
+from .rearrangement import format_read_rearrangement_summary
 from .rearrangement import rearrangement_segment_stream
+from .rearrangement import reference_lengths_from_pysam_header
 from .rearrangement import RearrangementEvent

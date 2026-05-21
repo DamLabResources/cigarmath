@@ -8,11 +8,11 @@ __author__ = "Will Dampier, PhD"
 from collections import namedtuple
 from dataclasses import dataclass
 from itertools import groupby
-from typing import Iterator, List, Optional, Tuple, TYPE_CHECKING
+from typing import Dict, Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 from cigarmath.block import query_block, reference_block
-from cigarmath.clipping import left_clipping, right_clipping
 from cigarmath.defn import CigarTuples
+from cigarmath.inference import inferred_query_sequence_length
 
 if TYPE_CHECKING:
     import pysam
@@ -60,17 +60,23 @@ class _Segment:
     q_end: int
 
 
+def _read_length_from_mappings(mappings: List[Mapping]) -> int:
+    if not mappings:
+        return 0
+    return max(
+        inferred_query_sequence_length(cigartuples)
+        for _, _, _, cigartuples in mappings
+    )
+
+
 def _normalize_segments(
     mappings: List[Mapping],
     min_segment_length: int,
-) -> List[_Segment]:
+) -> Tuple[int, List[_Segment]]:
     if not mappings:
-        return []
+        return 0, []
 
-    read_len = max(
-        query_block(cigartuples)[1] + right_clipping(cigartuples)
-        for _, _, _, cigartuples in mappings
-    )
+    read_len = _read_length_from_mappings(mappings)
 
     segments: List[_Segment] = []
     for index, (ref_name, ref_start, is_reverse, cigartuples) in enumerate(mappings):
@@ -98,7 +104,86 @@ def _normalize_segments(
         )
 
     segments.sort(key=lambda s: s.q_start)
-    return segments
+    return read_len, segments
+
+
+def _strand_symbol(is_reverse: bool) -> str:
+    return "-" if is_reverse else "+"
+
+
+def _segment_line(segment: _Segment, event_suffix: str = "") -> str:
+    line = (
+        f"[S{segment.index} {_strand_symbol(segment.is_reverse)}] "
+        f"q[{segment.q_start},{segment.q_end}) "
+        f"ref:{segment.ref_name}:{segment.ref_start}-{segment.ref_end}"
+    )
+    if event_suffix:
+        line = f"{line} {event_suffix}"
+    return line
+
+
+def _event_suffix(event: RearrangementEvent) -> str:
+    if event.event_type == "TRA":
+        if event.query_size:
+            return f"| TRA query +{event.query_size}"
+        return "| TRA"
+    return f"| {event.event_type} ref {event.reference_size:+d}"
+
+
+def _between_segment_line(event: RearrangementEvent) -> str:
+    if event.event_type == "INS":
+        return f"[INS] query +{event.query_size} bp"
+    if event.event_type == "DEL":
+        return f"[DEL] ref +{event.reference_size} bp"
+    raise ValueError(f"unexpected between-segment event type: {event.event_type}")
+
+
+def format_read_rearrangement_summary(
+    query_name: str,
+    mappings: List[Mapping],
+    events: List[RearrangementEvent],
+    show_clip_threshold: int = 30,
+    min_segment_length: int = 1,
+) -> str:
+    """ASCII bracket summary of split-read segments and inferred rearrangements."""
+    read_len, segments = _normalize_segments(mappings, min_segment_length)
+    lines = [
+        f"read {query_name} len={read_len} segments={len(segments)} events={len(events)}"
+    ]
+
+    between_by_pair = {
+        event.segment_indices: event
+        for event in events
+        if event.event_type in ("INS", "DEL")
+    }
+    downstream_labels: dict[int, List[str]] = {}
+    for event in events:
+        if event.event_type in ("INS", "DEL"):
+            continue
+        _, right_index = event.segment_indices
+        downstream_labels.setdefault(right_index, []).append(_event_suffix(event))
+
+    if segments and segments[0].q_start > show_clip_threshold:
+        lines.append(f"[Clip] q[0, {segments[0].q_start})")
+
+    for idx, segment in enumerate(segments):
+        suffix = ""
+        labels = downstream_labels.get(segment.index)
+        if labels:
+            suffix = " ".join(labels)
+        lines.append(_segment_line(segment, suffix))
+
+        if idx + 1 < len(segments):
+            next_segment = segments[idx + 1]
+            pair = (segment.index, next_segment.index)
+            between_event = between_by_pair.get(pair)
+            if between_event is not None:
+                lines.append(_between_segment_line(between_event))
+
+    if segments and read_len - segments[-1].q_end > show_clip_threshold:
+        lines.append(f"[Clip] q[{segments[-1].q_end}, {read_len})")
+
+    return "\n".join(lines)
 
 
 def _reference_proximity(left: _Segment, right: _Segment) -> int:
@@ -142,10 +227,64 @@ def _detect_inversion(
     return _make_event("INV", left, right, right.ref_start - left.ref_end, query_gap)
 
 
+def reference_lengths_from_pysam_header(header: dict) -> Dict[str, int]:
+    """Build contig name -> length from a pysam header dict."""
+    return {entry["SN"]: entry["LN"] for entry in header.get("SQ", [])}
+
+
+def _is_genomic_reference_wrap(
+    left: _Segment,
+    right: _Segment,
+    reference_size: int,
+    segments: List[_Segment],
+    reference_lengths: Optional[Dict[str, int]],
+    end_frac_threshold: float = 0.75,
+    start_frac_threshold: float = 0.25,
+    min_overlap_genome_fraction: float = 0.5,
+    min_read_span_genome_fraction: float = 0.7,
+) -> bool:
+    """True when a negative ref jump is genome-scale (linear ref wrap), not tandem DUP."""
+    left_span = left.ref_end - left.ref_start
+    right_span = right.ref_end - right.ref_start
+    if abs(reference_size) > max(left_span, right_span):
+        return True
+
+    ref_len = None if reference_lengths is None else reference_lengths.get(left.ref_name)
+    if ref_len is None or ref_len <= 0:
+        return False
+
+    left_frac = left.ref_end / ref_len
+    right_frac = right.ref_start / ref_len
+    overlap_frac = abs(reference_size) / ref_len
+    if (
+        left_frac >= end_frac_threshold
+        and right_frac <= start_frac_threshold
+        and overlap_frac >= min_overlap_genome_fraction
+    ):
+        return True
+
+    same_chr = [segment for segment in segments if segment.ref_name == left.ref_name]
+    if len(same_chr) < 2:
+        return False
+    span_start = min(segment.ref_start for segment in same_chr)
+    span_end = max(segment.ref_end for segment in same_chr)
+    if (span_end - span_start) / ref_len <= min_read_span_genome_fraction:
+        return False
+    has_proximal = any(
+        segment.ref_start < ref_len * start_frac_threshold for segment in same_chr
+    )
+    has_distal = any(
+        segment.ref_end > ref_len * end_frac_threshold for segment in same_chr
+    )
+    return has_proximal and has_distal
+
+
 def _detect_duplication(
     left: _Segment,
     right: _Segment,
     min_event_size: int,
+    segments: List[_Segment],
+    reference_lengths: Optional[Dict[str, int]],
 ) -> Optional[RearrangementEvent]:
     reference_size = right.ref_start - left.ref_end
     if reference_size >= 0:
@@ -153,6 +292,10 @@ def _detect_duplication(
     if abs(reference_size) < min_event_size:
         return None
     query_gap = max(0, right.q_start - left.q_end)
+    if _is_genomic_reference_wrap(
+        left, right, reference_size, segments, reference_lengths
+    ):
+        return _make_event("REF_WRAP", left, right, reference_size, query_gap)
     return _make_event("DUP", left, right, reference_size, query_gap)
 
 
@@ -185,9 +328,10 @@ def infer_rearrangements(
     max_breakpoint_distance: int = 1000,
     min_segment_length: int = 50,
     min_event_size: int = 30,
+    reference_lengths: Optional[Dict[str, int]] = None,
 ) -> List[RearrangementEvent]:
     """Classify rearrangements between adjacent split-read mapping segments."""
-    segments = _normalize_segments(mappings, min_segment_length)
+    _, segments = _normalize_segments(mappings, min_segment_length)
     if len(segments) < 2:
         return []
 
@@ -200,7 +344,13 @@ def infer_rearrangements(
             if event is not None:
                 events.append(event)
         elif right.ref_start < left.ref_end - max_breakpoint_distance:
-            event = _detect_duplication(left, right, min_event_size)
+            event = _detect_duplication(
+                left,
+                right,
+                min_event_size,
+                segments,
+                reference_lengths,
+            )
             if event is not None:
                 events.append(event)
         else:
@@ -219,6 +369,7 @@ def rearrangement_segment_stream(
     max_breakpoint_distance: int = 1000,
     min_segment_length: int = 50,
     min_event_size: int = 30,
+    reference_lengths: Optional[Dict[str, int]] = None,
 ) -> Iterator[Tuple[str, List[RearrangementEvent], List["pysam.AlignedSegment"]]]:
     """Group a query_name-sorted pysam stream and infer rearrangements per read."""
     valid_segments = (segment for segment in segments if segment.cigartuples)
@@ -239,5 +390,6 @@ def rearrangement_segment_stream(
             max_breakpoint_distance=max_breakpoint_distance,
             min_segment_length=min_segment_length,
             min_event_size=min_event_size,
+            reference_lengths=reference_lengths,
         )
         yield query_name, events, segment_list
