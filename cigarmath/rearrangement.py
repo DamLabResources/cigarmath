@@ -11,7 +11,14 @@ from itertools import groupby
 from typing import Dict, Iterator, List, Optional, Tuple, TYPE_CHECKING
 
 from cigarmath.block import query_block, reference_block
-from cigarmath.defn import CigarTuples
+from cigarmath.defn import (
+    BAM_CDEL,
+    BAM_CINS,
+    BAM_CREF_SKIP,
+    CigarTuples,
+    CONSUMES_QUERY,
+    CONSUMES_REFERENCE,
+)
 from cigarmath.inference import inferred_query_sequence_length
 
 if TYPE_CHECKING:
@@ -38,6 +45,18 @@ def _rearrangement_event_str(event: RearrangementEvent) -> str:
     right_name, right_pos = event.right_reference
     if event.event_type == "TRA":
         ref_part = "ref=N/A"
+    elif event.event_type == "INTRA_INS":
+        ref_part = f"ref={left_pos}"
+        return (
+            f"{event.event_type} {left_name}:{left_pos} @ q[{right_pos}) "
+            f"(query=+{event.query_size})"
+        )
+    elif event.event_type == "INTRA_DEL":
+        ref_part = f"ref +{event.reference_size}"
+        return (
+            f"{event.event_type} {left_name}:{left_pos}-{right_pos} @ q[{event.query_size}) "
+            f"({ref_part})"
+        )
     else:
         ref_part = f"ref={event.reference_size:+d}"
     return (
@@ -111,15 +130,97 @@ def _strand_symbol(is_reverse: bool) -> str:
     return "-" if is_reverse else "+"
 
 
-def _segment_line(segment: _Segment, event_suffix: str = "") -> str:
+def _segment_line(
+    segment: _Segment,
+    event_suffix: str = "",
+    q_start: Optional[int] = None,
+    q_end: Optional[int] = None,
+    ref_start: Optional[int] = None,
+    ref_end: Optional[int] = None,
+) -> str:
+    q_lo = segment.q_start if q_start is None else q_start
+    q_hi = segment.q_end if q_end is None else q_end
+    ref_lo = segment.ref_start if ref_start is None else ref_start
+    ref_hi = segment.ref_end if ref_end is None else ref_end
     line = (
         f"[S{segment.index} {_strand_symbol(segment.is_reverse)}] "
-        f"q[{segment.q_start},{segment.q_end}) "
-        f"ref:{segment.ref_name}:{segment.ref_start}-{segment.ref_end}"
+        f"q[{q_lo},{q_hi}) "
+        f"ref:{segment.ref_name}:{ref_lo}-{ref_hi}"
     )
     if event_suffix:
         line = f"{line} {event_suffix}"
     return line
+
+
+def _intra_event_read_anchor(event: RearrangementEvent) -> int:
+    if event.event_type == "INTRA_INS":
+        return event.right_reference[1]
+    return event.query_size
+
+
+def _append_segment_with_intra_events(
+    lines: List[str],
+    segment: _Segment,
+    intra_events: List[RearrangementEvent],
+    event_suffix: str = "",
+) -> None:
+    if not intra_events:
+        lines.append(_segment_line(segment, event_suffix))
+        return
+
+    sorted_events = sorted(intra_events, key=_intra_event_read_anchor)
+    remaining_q = segment.q_start
+    remaining_ref = segment.ref_start
+    suffix_on_last = event_suffix
+
+    for event in sorted_events:
+        if event.event_type == "INTRA_DEL":
+            q_at = event.query_size
+            ref_del_start = event.left_reference[1]
+            ref_del_end = event.right_reference[1]
+            if q_at > remaining_q:
+                lines.append(
+                    _segment_line(
+                        segment,
+                        q_start=remaining_q,
+                        q_end=q_at,
+                        ref_start=remaining_ref,
+                        ref_end=ref_del_start,
+                    )
+                )
+            lines.append(_intra_segment_line(event))
+            remaining_q = q_at
+            remaining_ref = ref_del_end
+        elif event.event_type == "INTRA_INS":
+            q_at = event.right_reference[1]
+            ref_at = event.left_reference[1]
+            if q_at > remaining_q:
+                lines.append(
+                    _segment_line(
+                        segment,
+                        q_start=remaining_q,
+                        q_end=q_at,
+                        ref_start=remaining_ref,
+                        ref_end=ref_at,
+                    )
+                )
+            lines.append(_intra_segment_line(event))
+            remaining_q = q_at + event.query_size
+            remaining_ref = ref_at
+
+    if remaining_q < segment.q_end or remaining_ref < segment.ref_end:
+        lines.append(
+            _segment_line(
+                segment,
+                event_suffix=suffix_on_last,
+                q_start=remaining_q,
+                q_end=segment.q_end,
+                ref_start=remaining_ref,
+                ref_end=segment.ref_end,
+            )
+        )
+    elif suffix_on_last:
+        lines.append(_segment_line(segment, event_suffix=suffix_on_last))
 
 
 def _event_suffix(event: RearrangementEvent) -> str:
@@ -136,6 +237,117 @@ def _between_segment_line(event: RearrangementEvent) -> str:
     if event.event_type == "DEL":
         return f"[DEL] ref +{event.reference_size} bp"
     raise ValueError(f"unexpected between-segment event type: {event.event_type}")
+
+
+def _intra_segment_line(event: RearrangementEvent) -> str:
+    if event.event_type == "INTRA_INS":
+        return f"[INTRA_INS] query +{event.query_size} bp"
+    if event.event_type == "INTRA_DEL":
+        return f"[INTRA_DEL] ref +{event.reference_size} bp"
+    raise ValueError(f"unexpected intra-segment event type: {event.event_type}")
+
+
+def _read_query_coord(raw_query_pos: int, is_reverse: bool, read_len: int) -> int:
+    if is_reverse:
+        return read_len - raw_query_pos
+    return raw_query_pos
+
+
+def _make_intra_event(
+    event_type: str,
+    segment_index: int,
+    ref_name: str,
+    ref_start: int,
+    ref_end: int,
+    read_query_anchor: int,
+    reference_size: int,
+    query_size: int,
+    is_reverse: bool,
+) -> RearrangementEvent:
+    if event_type == "INTRA_INS":
+        return RearrangementEvent(
+            event_type=event_type,
+            segment_indices=(segment_index, segment_index),
+            left_reference=(ref_name, ref_start),
+            right_reference=(ref_name, read_query_anchor),
+            reference_size=reference_size,
+            query_size=query_size,
+            strands=(is_reverse, is_reverse),
+        )
+    return RearrangementEvent(
+        event_type=event_type,
+        segment_indices=(segment_index, segment_index),
+        left_reference=(ref_name, ref_start),
+        right_reference=(ref_name, ref_end),
+        reference_size=reference_size,
+        query_size=read_query_anchor,
+        strands=(is_reverse, is_reverse),
+    )
+
+
+def _detect_intra_segment_indels(
+    mappings: List[Mapping],
+    min_event_size: int,
+) -> List[RearrangementEvent]:
+    """Large insertions/deletions encoded in CIGAR operations within one segment."""
+    if not mappings:
+        return []
+
+    read_len = _read_length_from_mappings(mappings)
+    del_ops = {BAM_CDEL, BAM_CREF_SKIP}
+    events: List[RearrangementEvent] = []
+
+    for index, (ref_name, ref_start, is_reverse, cigartuples) in enumerate(mappings):
+        ref_pos = ref_start
+        query_pos = 0
+        for op, size in cigartuples:
+            if op == BAM_CINS and size >= min_event_size:
+                read_q = _read_query_coord(query_pos, is_reverse, read_len)
+                events.append(
+                    _make_intra_event(
+                        "INTRA_INS",
+                        index,
+                        ref_name,
+                        ref_pos,
+                        ref_pos,
+                        read_q,
+                        0,
+                        size,
+                        is_reverse,
+                    )
+                )
+                query_pos += size
+            elif op in del_ops and size >= min_event_size:
+                read_q = _read_query_coord(query_pos, is_reverse, read_len)
+                events.append(
+                    _make_intra_event(
+                        "INTRA_DEL",
+                        index,
+                        ref_name,
+                        ref_pos,
+                        ref_pos + size,
+                        read_q,
+                        size,
+                        0,
+                        is_reverse,
+                    )
+                )
+                ref_pos += size
+            else:
+                if op in CONSUMES_REFERENCE:
+                    ref_pos += size
+                if op in CONSUMES_QUERY:
+                    query_pos += size
+
+    events.sort(
+        key=lambda event: (
+            event.segment_indices[0],
+            event.right_reference[1]
+            if event.event_type == "INTRA_INS"
+            else event.query_size,
+        )
+    )
+    return events
 
 
 def format_read_rearrangement_summary(
@@ -156,9 +368,15 @@ def format_read_rearrangement_summary(
         for event in events
         if event.event_type in ("INS", "DEL")
     }
+    intra_by_segment: dict[int, List[RearrangementEvent]] = {}
+    for event in events:
+        if event.event_type not in ("INTRA_INS", "INTRA_DEL"):
+            continue
+        intra_by_segment.setdefault(event.segment_indices[0], []).append(event)
+
     downstream_labels: dict[int, List[str]] = {}
     for event in events:
-        if event.event_type in ("INS", "DEL"):
+        if event.event_type in ("INS", "DEL", "INTRA_INS", "INTRA_DEL"):
             continue
         _, right_index = event.segment_indices
         downstream_labels.setdefault(right_index, []).append(_event_suffix(event))
@@ -171,7 +389,12 @@ def format_read_rearrangement_summary(
         labels = downstream_labels.get(segment.index)
         if labels:
             suffix = " ".join(labels)
-        lines.append(_segment_line(segment, suffix))
+        _append_segment_with_intra_events(
+            lines,
+            segment,
+            intra_by_segment.get(segment.index, []),
+            event_suffix=suffix,
+        )
 
         if idx + 1 < len(segments):
             next_segment = segments[idx + 1]
@@ -355,12 +578,15 @@ def infer_rearrangements(
     min_embedded_overlap_fraction: float = 0.5,
     max_junction_slop: int = 20,
 ) -> List[RearrangementEvent]:
-    """Classify rearrangements between adjacent split-read mapping segments."""
+    """Classify rearrangements within segments and between adjacent mapping segments."""
     _, segments = _normalize_segments(mappings, min_segment_length)
-    if len(segments) < 2:
-        return []
+    events: List[RearrangementEvent] = _detect_intra_segment_indels(
+        mappings, min_event_size
+    )
 
-    events: List[RearrangementEvent] = []
+    if len(segments) < 2:
+        return events
+
     for left, right in zip(segments, segments[1:]):
         if left.ref_name != right.ref_name:
             events.append(_detect_translocation(left, right))

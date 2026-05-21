@@ -22,6 +22,20 @@ reference wrap) instead of tandem **DUP**.
 embedded inversion when opposite-strand segments overlap substantially on the
 reference with a near-contiguous query junction.
 
+Large indels encoded inside a single alignment CIGAR are classified separately
+from split-segment gaps:
+
+- **INTRA_DEL** — large ``D`` (or ``N``) operations within one segment
+- **INTRA_INS** — large ``I`` operations within one segment
+- **DEL** / **INS** — reference or query gaps between adjacent segments only
+
+Intra-segment events use ``segment_indices=(i, i)``. Summaries split the
+segment line around each event (same layout as between-segment gaps), e.g.::
+
+    [S0 +] q[0,500) ref:chr1:1000-1500
+    [INTRA_DEL] ref +500 bp
+    [S0 +] q[500,1000) ref:chr1:2000-2500
+
 ASCII summary example::
 
     >>> from cigarmath.rearrangement import infer_rearrangements, format_read_rearrangement_summary

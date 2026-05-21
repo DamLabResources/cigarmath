@@ -154,6 +154,42 @@ def test_detect_embedded_inversion_test_sam_read():
     assert events[0].reference_size == -1773
 
 
+def test_detect_intra_deletion_single_segment():
+    mapping = _mapping(CHR1, 1000, False, "0S 500M 500D 500M 0S")
+    events = infer_rearrangements([mapping], min_segment_length=1, min_event_size=30)
+    assert len(events) == 1
+    assert events[0].event_type == "INTRA_DEL"
+    assert events[0].segment_indices == (0, 0)
+    assert events[0].reference_size == 500
+    assert events[0].left_reference == (CHR1, 1500)
+    assert events[0].right_reference == (CHR1, 2000)
+    assert events[0].query_size == 500
+
+
+def test_detect_intra_insertion_single_segment():
+    mapping = _mapping(CHR1, 1000, False, "0S 400M 200I 400M 0S")
+    events = infer_rearrangements([mapping], min_segment_length=1, min_event_size=30)
+    assert len(events) == 1
+    assert events[0].event_type == "INTRA_INS"
+    assert events[0].segment_indices == (0, 0)
+    assert events[0].query_size == 200
+    assert events[0].left_reference == (CHR1, 1400)
+    assert events[0].right_reference == (CHR1, 400)
+
+
+def test_detect_intra_and_between_segment_events():
+    read_len = 1000
+    mappings = [
+        _mapping(CHR1, 1000, False, "0S 300M 100D 200M 500S"),
+        _forward_split(CHR1, 11500, query_start=500, aligned_length=500, read_len=read_len),
+    ]
+    _assert_uniform_read_length(mappings)
+    events = infer_rearrangements(mappings, min_segment_length=1, min_event_size=30)
+    assert {event.event_type for event in events} == {"INTRA_DEL", "DEL"}
+    assert sum(event.event_type == "INTRA_DEL" for event in events) == 1
+    assert sum(event.event_type == "DEL" for event in events) == 1
+
+
 def test_detect_deletion():
     read_len = 1000
     mappings = [
@@ -431,10 +467,18 @@ def test_rearrangement_segment_stream_test_sam():
     assert len(results) == 193
 
     reads_with_events = [(q, events, segments) for q, events, segments in results if events]
-    assert len(reads_with_events) == 50
+    assert len(reads_with_events) == 79
 
     event_counts = Counter(event.event_type for _, events, _ in results for event in events)
-    assert event_counts == Counter({"INV": 10, "DEL": 38, "REF_WRAP": 5})
+    assert event_counts == Counter(
+        {
+            "INV": 10,
+            "DEL": 38,
+            "REF_WRAP": 5,
+            "INTRA_INS": 34,
+            "INTRA_DEL": 1,
+        }
+    )
 
     query_name, events, segments = reads_with_events[0]
     event = events[0]
@@ -460,6 +504,34 @@ def test_format_summary_inversion_two_segment():
         "[S0 +] q[100,500) ref:chr1:1000-1400\n"
         "[S1 -] q[500,900) ref:chr1:1380-1780 | INV ref -20\n"
         "[Clip] q[900, 1000)"
+    )
+
+
+def test_format_summary_intra_deletion():
+    mapping = _mapping(CHR1, 1000, False, "0S 500M 500D 500M 0S")
+    events = infer_rearrangements([mapping], min_segment_length=1, min_event_size=30)
+    summary = format_read_rearrangement_summary(
+        "intra_del", [mapping], events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read intra_del len=1000 segments=1 events=1\n"
+        "[S0 +] q[0,500) ref:chr1:1000-1500\n"
+        "[INTRA_DEL] ref +500 bp\n"
+        "[S0 +] q[500,1000) ref:chr1:2000-2500"
+    )
+
+
+def test_format_summary_intra_insertion():
+    mapping = _mapping(CHR1, 1000, False, "0S 400M 200I 400M 0S")
+    events = infer_rearrangements([mapping], min_segment_length=1, min_event_size=30)
+    summary = format_read_rearrangement_summary(
+        "intra_ins", [mapping], events, min_segment_length=1, show_clip_threshold=1000
+    )
+    assert summary == (
+        "read intra_ins len=1000 segments=1 events=1\n"
+        "[S0 +] q[0,400) ref:chr1:1000-1400\n"
+        "[INTRA_INS] query +200 bp\n"
+        "[S0 +] q[600,1000) ref:chr1:1400-1800"
     )
 
 
