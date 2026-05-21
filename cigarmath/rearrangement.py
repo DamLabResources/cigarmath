@@ -80,6 +80,14 @@ class _Segment:
 
 
 def _read_length_from_mappings(mappings: List[Mapping]) -> int:
+    """Infer full read length as the maximum IQL across split mappings.
+
+    One supplementary alignment may cover only part of the read; the longest
+    implied query length is treated as the molecule length for coordinate projection.
+
+    S0  IQL=1000   S1  IQL=1000   -> read_len=1000
+    S0  IQL=800    S1  IQL=1000   -> read_len=1000
+    """
     if not mappings:
         return 0
     return max(
@@ -92,6 +100,17 @@ def _normalize_segments(
     mappings: List[Mapping],
     min_segment_length: int,
 ) -> Tuple[int, List[_Segment]]:
+    """Project each mapping to read-ordered segments with reference and query spans.
+
+    Mappings are sorted by projected query start. Reverse-strand records are flipped
+    into read order (5'->3' along the sequenced molecule). Short alignments below
+    ``min_segment_length`` on the reference are dropped.
+
+    READ  ----[====S0====]----[==S1==]----
+    REF       chr1:1000-1400    chr1:5000-5200
+
+    Returns (read_len, segments).
+    """
     if not mappings:
         return 0, []
 
@@ -248,6 +267,13 @@ def _intra_segment_line(event: RearrangementEvent) -> str:
 
 
 def _read_query_coord(raw_query_pos: int, is_reverse: bool, read_len: int) -> int:
+    """Map a CIGAR-walk query coordinate into read order (5'->3' along the read).
+
+    Forward alignments use raw positions unchanged. Reverse alignments mirror
+    against ``read_len`` so intra-segment anchors match ``_normalize_segments``.
+
+    read_len=1000, reverse, raw_q=700  ->  read_q=300
+    """
     if is_reverse:
         return read_len - raw_query_pos
     return raw_query_pos
@@ -264,6 +290,14 @@ def _make_intra_event(
     query_size: int,
     is_reverse: bool,
 ) -> RearrangementEvent:
+    """Build an intra-segment event tied to a single mapping index.
+
+    ``INTRA_DEL``: ``reference_size`` is deletion length; ``query_size`` is the
+    read-coordinate anchor before the deleted reference bases.
+
+    ``INTRA_INS``: ``query_size`` is insertion length; ``right_reference[1]`` stores
+    the read-coordinate anchor; ``left_reference[1]`` is the reference position.
+    """
     if event_type == "INTRA_INS":
         return RearrangementEvent(
             event_type=event_type,
@@ -289,7 +323,16 @@ def _detect_intra_segment_indels(
     mappings: List[Mapping],
     min_event_size: int,
 ) -> List[RearrangementEvent]:
-    """Large insertions/deletions encoded in CIGAR operations within one segment."""
+    """Detect large ``I``/``D`` (and ``N``) operations inside a single alignment CIGAR.
+
+    These are indels within one SAM record, not gaps between supplementary segments.
+    Emits ``INTRA_INS`` / ``INTRA_DEL`` with ``segment_indices=(i, i)``.
+
+    READ  ----AAAA----IIII----CCCC----
+    REF       AAAAGGGG----CCCC
+    CGS       4M   200I   4M        -> INTRA_INS +200 at query anchor after first 4M
+    CGS       4M   500D   4M        -> INTRA_DEL +500 at matching ref coordinates
+    """
     if not mappings:
         return []
 
@@ -410,6 +453,17 @@ def format_read_rearrangement_summary(
 
 
 def _reference_proximity(left: _Segment, right: _Segment) -> int:
+    """Minimum distance between reference endpoints of two adjacent segments.
+
+    Used for inversion breakpoint clustering: small values mean the splits likely
+    bracket one rearrangement junction.
+
+    REF  ..........[====left====]....[====right====].......
+                      ^left_end   right_start^
+    proximity = min(|right_start - left_end|, |left_start - right_end|)
+
+    left ends 1400, right starts 1380  -> proximity=20
+    """
     return min(
         abs(right.ref_start - left.ref_end),
         abs(left.ref_start - right.ref_end),
@@ -417,6 +471,14 @@ def _reference_proximity(left: _Segment, right: _Segment) -> int:
 
 
 def _reference_overlap(left: _Segment, right: _Segment) -> int:
+    """Length of reference interval shared by two segments (0 if none).
+
+    REF  ....[====left====]
+    REF  ........[====right====]...
+    overlap = min(left_end, right_end) - max(left_start, right_start)
+
+    left 1000-1400, right 1280-1580  -> overlap=120
+    """
     return min(left.ref_end, right.ref_end) - max(left.ref_start, right.ref_start)
 
 
@@ -427,6 +489,11 @@ def _make_event(
     reference_size: Optional[int],
     query_size: int,
 ) -> RearrangementEvent:
+    """Build a between-segment ``RearrangementEvent`` from an adjacent segment pair.
+
+    ``left`` is upstream on the read; ``right`` is downstream. Breakpoints are stored
+    as ``left_reference=(ref, left.ref_end)`` and ``right_reference=(ref, right.ref_start)``.
+    """
     return RearrangementEvent(
         event_type=event_type,
         segment_indices=(left.index, right.index),
@@ -439,6 +506,14 @@ def _make_event(
 
 
 def _detect_translocation(left: _Segment, right: _Segment) -> RearrangementEvent:
+    """Classify adjacent segments on different contigs as translocation (TRA).
+
+    READ  ----[====S0====]----[====S1====]----
+    REF   chr1:1000-1400       chr7:80000-80400
+
+    Always returns TRA; ``reference_size`` is None and ``query_size`` is the
+    intervening query gap (if any).
+    """
     query_gap = max(0, right.q_start - left.q_end)
     return _make_event("TRA", left, right, None, query_gap)
 
@@ -451,6 +526,23 @@ def _detect_inversion(
     min_embedded_overlap_fraction: float = 0.5,
     max_junction_slop: int = 20,
 ) -> Optional[RearrangementEvent]:
+    """Detect inversion (INV) when adjacent segments map to opposite strands.
+
+    Path 1 — close breakpoints (classic split-read inversion):
+
+    READ  ----[====S0 +====]----[====S1 -====]----
+    REF        chr1:1000-1400     chr1:1380-1780
+    proximity = |1380 - 1400| = 20  <= max_breakpoint_distance  -> INV
+
+    Path 2 — embedded inversion (overlapping +/- blocks, distant endpoints):
+
+    READ  ----[========S0 +========]----
+    READ              [====S1 -====]
+    REF   chr1:2100-5500 (forward span contains reverse block)
+    large ref overlap, query junction slop <= max_junction_slop  -> INV
+
+    Returns None if strands match or neither path qualifies.
+    """
     query_junction = right.q_start - left.q_end
     query_gap = max(0, query_junction)
 
@@ -488,7 +580,21 @@ def _is_genomic_reference_wrap(
     min_overlap_genome_fraction: float = 0.5,
     min_read_span_genome_fraction: float = 0.7,
 ) -> bool:
-    """True when a negative ref jump is genome-scale (linear ref wrap), not tandem DUP."""
+    """Return True when a negative reference jump is linear-genome wrap, not tandem DUP.
+
+    Same-strand split where the downstream segment maps far upstream on the reference
+    (HIV 3' body then 5' terminus on HXB2F), not a local duplicate.
+
+    READ  ----[======== late genome S0 ========][S1 proximal]----
+    REF   HXB2F:2100-8582  then  HXB2F:54-180   (reference_size ~ -8500)
+
+    Signals (any can qualify):
+    - |reference_size| larger than both segment spans
+    - left ends in distal fraction of chromosome, right starts in proximal fraction
+    - read spans most of the chromosome with both termini represented
+
+    >>> _is_genomic_reference_wrap(...)  # True for HXB2F LTR-wrap-like pairs
+    """
     left_span = left.ref_end - left.ref_start
     right_span = right.ref_end - right.ref_start
     if abs(reference_size) > max(left_span, right_span):
@@ -531,6 +637,21 @@ def _detect_duplication(
     segments: List[_Segment],
     reference_lengths: Optional[Dict[str, int]],
 ) -> Optional[RearrangementEvent]:
+    """Detect tandem duplication (DUP) or reference wrap (REF_WRAP) on the same strand.
+
+    Requires the downstream segment to start well before the upstream segment ends
+    on the reference (negative ``reference_size``).
+
+    READ  ----[====S0====]----[====S1====]----
+    REF   chr1:1000-2000        chr1:1800-2800
+    reference_size = 1800 - 2000 = -200  -> DUP (local overlap)
+
+    READ  ----[======== S0 ========][S1 5' terminus]----
+    REF   HXB2F:2100-8582  ->  HXB2F:54-180
+    reference_size ~ -8500, genome-wrap heuristics  -> REF_WRAP
+
+    Returns None if ``reference_size >= 0`` or event is smaller than ``min_event_size``.
+    """
     reference_size = right.ref_start - left.ref_end
     if reference_size >= 0:
         return None
@@ -549,6 +670,18 @@ def _detect_deletion(
     right: _Segment,
     min_event_size: int,
 ) -> Optional[RearrangementEvent]:
+    """Detect deletion (DEL) between colinear same-strand segments.
+
+    Reference coordinates jump forward farther than the read advances: sequence
+    missing on the reference between split alignments, not within either CIGAR.
+
+    READ  ----[====S0====]----[====S1====]----
+    REF   chr1:1000-1500  ....gap....  chr1:11500-12000
+    ref_gap=10000, query_gap=0  -> DEL +10000 bp
+
+    Returns None if the reference gap is smaller than ``min_event_size`` or if the
+    query gap is as large as the reference gap (gaps dominated by inserted sequence).
+    """
     ref_gap = right.ref_start - left.ref_end
     query_gap = max(0, right.q_start - left.q_end)
     if ref_gap < min_event_size or query_gap >= ref_gap:
@@ -561,6 +694,18 @@ def _detect_insertion(
     right: _Segment,
     min_event_size: int,
 ) -> Optional[RearrangementEvent]:
+    """Detect insertion (INS) between colinear same-strand segments.
+
+    The read advances farther than reference coordinates: sequence present in the
+    molecule between split alignments but not accounted for by reference span.
+
+    READ  ----[====S0====]--extra--[====S1====]----
+    REF   chr1:1000-1500              chr1:1500-1900
+    query_gap=100, ref_gap=0  -> INS +100 bp
+
+    Returns None if the query gap is smaller than ``min_event_size`` or if the
+    reference gap is at least as large as the query gap (deletion-like spacing).
+    """
     ref_gap = right.ref_start - left.ref_end
     query_gap = max(0, right.q_start - left.q_end)
     if query_gap < min_event_size or ref_gap >= query_gap:
@@ -578,7 +723,14 @@ def infer_rearrangements(
     min_embedded_overlap_fraction: float = 0.5,
     max_junction_slop: int = 20,
 ) -> List[RearrangementEvent]:
-    """Classify rearrangements within segments and between adjacent mapping segments."""
+    """Classify CIGAR-internal and between-segment rearrangements for one read.
+
+    First pass: ``INTRA_INS`` / ``INTRA_DEL`` from large ``I`` and ``D`` ops in each
+    mapping CIGAR. Second pass: compare adjacent query-ordered segments for
+    TRA, INV, DUP/REF_WRAP, DEL, and INS.
+
+    READ  ----[S0]----[S1]----   (two supplementary alignments, one molecule)
+    """
     _, segments = _normalize_segments(mappings, min_segment_length)
     events: List[RearrangementEvent] = _detect_intra_segment_indels(
         mappings, min_event_size
