@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+scratch/
+
 # Distribution / packaging
 .Python
 env/
@@ -46,6 +48,9 @@ coverage.xml
 *.cover
 .hypothesis/
 .pytest_cache/
+
+# Local rearrangement summary artifacts from tests
+tests/test_data/.rearrangement_summaries_test_sam.txt
 
 # Translations
 *.mo

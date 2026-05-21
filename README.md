@@ -57,6 +57,12 @@ print(query_pos)  # [1, 2, 5, None, None, 6]
 - Find overlapping regions
 - Calculate alignment metrics
 
+### Rearrangement inference
+- Classify split-read events (INV, DEL, INS, INTRA_DEL, INTRA_INS, DUP, REF_WRAP, TRA) from supplementary alignments
+- Stream over name-sorted BAM records with `rearrangement_segment_stream`
+
+![Rearrangement decision tree](docs/rearrangements.png)
+
 ## Documentation
 
 The `notebooks/` directory contains Jupyter notebooks with detailed examples:
