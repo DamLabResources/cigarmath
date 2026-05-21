@@ -18,6 +18,10 @@ When ``reference_lengths`` is supplied (e.g. from the SAM/BAM ``@SQ`` header),
 genome-scale negative reference overlap is classified as **REF_WRAP** (linear
 reference wrap) instead of tandem **DUP**.
 
+**INV** uses two paths: close breakpoint proximity (default 1000 bp), or
+embedded inversion when opposite-strand segments overlap substantially on the
+reference with a near-contiguous query junction.
+
 ASCII summary example::
 
     >>> from cigarmath.rearrangement import infer_rearrangements, format_read_rearrangement_summary

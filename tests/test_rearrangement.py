@@ -116,6 +116,44 @@ def test_detect_inversion_three_segment():
     assert all(event.event_type == "INV" for event in events)
 
 
+def test_detect_embedded_inversion_opposite_strand_overlap():
+    """+ then - with large ref overlap and distant breakpoints (052b6939-like)."""
+    read_len = 5362
+    mappings = [
+        _forward_split("HXB2F", 2097, query_start=172, aligned_length=3432, read_len=read_len),
+        _reverse_split("HXB2F", 3017, query_start=3601, aligned_length=1760, read_len=read_len),
+    ]
+    _assert_uniform_read_length(mappings)
+    events = infer_rearrangements(mappings, min_segment_length=50)
+    assert len(events) == 1
+    assert events[0].event_type == "INV"
+    assert events[0].reference_size < 0
+    assert events[0].query_size == 0
+
+
+def test_detect_embedded_inversion_test_sam_read():
+    """End-to-end on 052b6939-f93c-4633-9031-16285e79a7bf_20-5381 from test.sam."""
+    pysam = pytest.importorskip("pysam")
+
+    query_name = "052b6939-f93c-4633-9031-16285e79a7bf_20-5381"
+    test_sam = "tests/test_data/test.sam"
+    with pysam.AlignmentFile(test_sam, "r") as handle:
+        segments = [record for record in handle if record.query_name == query_name]
+    mappings = [
+        (
+            segment.reference_name,
+            segment.reference_start,
+            segment.is_reverse,
+            segment.cigartuples,
+        )
+        for segment in segments
+    ]
+    events = infer_rearrangements(mappings, min_segment_length=50)
+    assert len(events) == 1
+    assert events[0].event_type == "INV"
+    assert events[0].reference_size == -1773
+
+
 def test_detect_deletion():
     read_len = 1000
     mappings = [
@@ -393,10 +431,10 @@ def test_rearrangement_segment_stream_test_sam():
     assert len(results) == 193
 
     reads_with_events = [(q, events, segments) for q, events, segments in results if events]
-    assert len(reads_with_events) == 49
+    assert len(reads_with_events) == 50
 
     event_counts = Counter(event.event_type for _, events, _ in results for event in events)
-    assert event_counts == Counter({"INV": 8, "DEL": 38, "REF_WRAP": 5})
+    assert event_counts == Counter({"INV": 10, "DEL": 38, "REF_WRAP": 5})
 
     query_name, events, segments = reads_with_events[0]
     event = events[0]

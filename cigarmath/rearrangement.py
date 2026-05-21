@@ -193,6 +193,10 @@ def _reference_proximity(left: _Segment, right: _Segment) -> int:
     )
 
 
+def _reference_overlap(left: _Segment, right: _Segment) -> int:
+    return min(left.ref_end, right.ref_end) - max(left.ref_start, right.ref_start)
+
+
 def _make_event(
     event_type: str,
     left: _Segment,
@@ -220,11 +224,29 @@ def _detect_inversion(
     left: _Segment,
     right: _Segment,
     max_breakpoint_distance: int,
+    min_embedded_inversion_size: int = 150,
+    min_embedded_overlap_fraction: float = 0.5,
+    max_junction_slop: int = 20,
 ) -> Optional[RearrangementEvent]:
-    if _reference_proximity(left, right) > max_breakpoint_distance:
+    query_junction = right.q_start - left.q_end
+    query_gap = max(0, query_junction)
+
+    if _reference_proximity(left, right) <= max_breakpoint_distance:
+        return _make_event(
+            "INV", left, right, right.ref_start - left.ref_end, query_gap
+        )
+
+    ref_overlap = _reference_overlap(left, right)
+    if ref_overlap < min_embedded_inversion_size:
         return None
-    query_gap = max(0, right.q_start - left.q_end)
-    return _make_event("INV", left, right, right.ref_start - left.ref_end, query_gap)
+    left_span = left.ref_end - left.ref_start
+    right_span = right.ref_end - right.ref_start
+    overlap_fraction = ref_overlap / max(1, min(left_span, right_span))
+    if overlap_fraction < min_embedded_overlap_fraction:
+        return None
+    if abs(query_junction) > max_junction_slop:
+        return None
+    return _make_event("INV", left, right, -ref_overlap, query_gap)
 
 
 def reference_lengths_from_pysam_header(header: dict) -> Dict[str, int]:
@@ -329,6 +351,9 @@ def infer_rearrangements(
     min_segment_length: int = 50,
     min_event_size: int = 30,
     reference_lengths: Optional[Dict[str, int]] = None,
+    min_embedded_inversion_size: int = 150,
+    min_embedded_overlap_fraction: float = 0.5,
+    max_junction_slop: int = 20,
 ) -> List[RearrangementEvent]:
     """Classify rearrangements between adjacent split-read mapping segments."""
     _, segments = _normalize_segments(mappings, min_segment_length)
@@ -340,7 +365,14 @@ def infer_rearrangements(
         if left.ref_name != right.ref_name:
             events.append(_detect_translocation(left, right))
         elif left.is_reverse != right.is_reverse:
-            event = _detect_inversion(left, right, max_breakpoint_distance)
+            event = _detect_inversion(
+                left,
+                right,
+                max_breakpoint_distance,
+                min_embedded_inversion_size=min_embedded_inversion_size,
+                min_embedded_overlap_fraction=min_embedded_overlap_fraction,
+                max_junction_slop=max_junction_slop,
+            )
             if event is not None:
                 events.append(event)
         elif right.ref_start < left.ref_end - max_breakpoint_distance:
@@ -370,6 +402,9 @@ def rearrangement_segment_stream(
     min_segment_length: int = 50,
     min_event_size: int = 30,
     reference_lengths: Optional[Dict[str, int]] = None,
+    min_embedded_inversion_size: int = 150,
+    min_embedded_overlap_fraction: float = 0.5,
+    max_junction_slop: int = 20,
 ) -> Iterator[Tuple[str, List[RearrangementEvent], List["pysam.AlignedSegment"]]]:
     """Group a query_name-sorted pysam stream and infer rearrangements per read."""
     valid_segments = (segment for segment in segments if segment.cigartuples)
@@ -391,5 +426,8 @@ def rearrangement_segment_stream(
             min_segment_length=min_segment_length,
             min_event_size=min_event_size,
             reference_lengths=reference_lengths,
+            min_embedded_inversion_size=min_embedded_inversion_size,
+            min_embedded_overlap_fraction=min_embedded_overlap_fraction,
+            max_junction_slop=max_junction_slop,
         )
         yield query_name, events, segment_list
