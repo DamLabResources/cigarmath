@@ -1,0 +1,34 @@
+digraph RearrangementInference {
+    rankdir=TB;
+    splines=true;
+    nodesep=0.45;
+    ranksep=0.55;
+    fontname="Helvetica";
+    node [fontname="Helvetica", fontsize=11, style=rounded];
+    edge [fontname="Helvetica", fontsize=10];
+
+    pair [label="Adjacent query-order pair\n(A then B)", shape=box];
+
+    sameRef [label="Same\nreference_name?", shape=diamond];
+    sameStrand [label="Same\nstrand?", shape=diamond];
+    orderRef [label="B starts before\nA ends on ref?", shape=diamond];
+    sizes [label="ref gap vs\nquery gap", shape=diamond];
+
+    TRA [label="Translocation (TRA)", shape=box];
+    INV [label="Inversion (INV)", shape=box];
+    DUP [label="Tandem duplication (DUP)", shape=box];
+    DEL [label="Deletion (DEL)", shape=box];
+    INS [label="Unaligned insertion (INS)", shape=box];
+    CLEAN [label="Clean split\n(no event)", shape=box];
+
+    pair -> sameRef;
+    sameRef -> TRA [label="No"];
+    sameRef -> sameStrand [label="Yes"];
+    sameStrand -> INV [label="No"];
+    sameStrand -> orderRef [label="Yes"];
+    orderRef -> DUP [label="yes"];
+    orderRef -> sizes [label="no"];
+    sizes -> DEL [label="ref_gap >> query_gap"];
+    sizes -> INS [label="query_gap >> ref_gap"];
+    sizes -> CLEAN [label="both small"];
+}

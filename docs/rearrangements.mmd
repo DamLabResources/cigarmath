@@ -1,0 +1,12 @@
+flowchart TB
+    pair[Adjacent query-order pair A then B]
+    pair --> sameRef{Same reference_name?}
+    sameRef -- No --> TRA[Translocation BND]
+    sameRef -- Yes --> sameStrand{Same strand?}
+    sameStrand -- No --> INV[Inversion]
+    sameStrand -- Yes --> orderRef{B starts before A ends on ref?}
+    orderRef -- yes --> DUP[Tandem duplication]
+    orderRef -- no --> sizes{ref gap vs query gap}
+    sizes -- ref_gap >> query_gap --> DEL[Deletion]
+    sizes -- query_gap >> ref_gap --> INS[Unaligned insertion]
+    sizes -- both small --> CLEAN[Clean split no event]

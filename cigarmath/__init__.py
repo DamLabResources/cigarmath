@@ -52,3 +52,7 @@ from .combine import combine_adjacent_alignments
 from .combine import trim_alignment
 
 from .pileup import depth
+
+from .rearrangement import infer_rearrangements
+from .rearrangement import rearrangement_segment_stream
+from .rearrangement import RearrangementEvent
