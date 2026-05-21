@@ -69,6 +69,16 @@ Combine
    :undoc-members:
    :show-inheritance:
 
+.. _rearrangements-api:
+
+Rearrangements
+--------------
+
+.. automodule:: cigarmath.rearrangement
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Pileup
 ------
 

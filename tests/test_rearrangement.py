@@ -12,7 +12,6 @@ from cigarmath.rearrangement import (
     infer_rearrangements,
     rearrangement_segment_stream,
     reference_lengths_from_pysam_header,
-    RearrangementEvent,
 )
 
 HXB2F_LEN = 9086
@@ -485,7 +484,6 @@ def test_rearrangement_segment_stream_test_sam():
     assert isinstance(segments[event.segment_indices[0]], pysam.AlignedSegment)
     assert segments[event.segment_indices[0]].query_name == query_name
     assert segments[event.segment_indices[1]].query_name == query_name
-
 
 
 def test_format_summary_inversion_two_segment():

@@ -13,6 +13,7 @@ See :func:`cigarmath.rearrangement.infer_rearrangements`,
 :func:`cigarmath.rearrangement.rearrangement_segment_stream`,
 :func:`cigarmath.rearrangement.reference_lengths_from_pysam_header`, and
 :func:`cigarmath.rearrangement.format_read_rearrangement_summary`.
+For full autodoc listings, see :ref:`rearrangements-api`.
 
 When ``reference_lengths`` is supplied (e.g. from the SAM/BAM ``@SQ`` header),
 genome-scale negative reference overlap is classified as **REF_WRAP** (linear
