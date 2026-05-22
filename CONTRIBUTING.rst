@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/judowill/cigarmath/issues.
+Report bugs at https://github.com/DamLabResources/cigarmath/issues.
 
 If you are reporting a bug, please include:
 
@@ -102,9 +102,9 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
-3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check
-   https://travis-ci.com/judowill/cigarmath/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+3. The pull request should work for the Python versions supported by
+   `pyproject.toml` (currently 3.8+). Check GitHub Actions on your PR and
+   make sure the tests pass for the full CI matrix.
 
 Tips
 ----
@@ -117,12 +117,11 @@ $ pytest tests.test_cigarmath
 Deploying
 ---------
 
-A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in HISTORY.rst).
-Then run::
+A reminder for the maintainers on how to deploy a release.
 
-$ bump2version patch # possible: major / minor / patch
-$ git push
-$ git push --tags
+1. Update `version` in `pyproject.toml`.
+2. Update `HISTORY.md` (if you are maintaining a changelog for the release).
+3. Build the distribution and upload to PyPI (example)::
 
-Travis will then deploy to PyPI if tests pass.
+$ python -m build
+$ python -m twine upload dist/*

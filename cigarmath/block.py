@@ -17,16 +17,19 @@ from cigarmath.defn import (
 )
 from cigarmath.clipping import left_clipping
 
+
 def reference_offset(cigartuples: CigarTuples) -> int:
     """Calculate the length of the reference mapping block based on cigartuples.
 
-    REF     AAAAGACC--CCC
-    QRY     AAAA-ACCGGCCC
-    CGS  HHHMMMMDMMMIIMMMHHHH
-    CGT  3H 4M 1D3M 2I 3M 4H
+    Example::
 
-    >>>> reference_offset(cigartuples)
-    10
+        REF     AAAAGACC--CCC
+        QRY     AAAA-ACCGGCCC
+        CGS  HHHMMMMDMMMIIMMMHHHH
+        CGT  3H 4M 1D3M 2I 3M 4H
+
+        reference_offset(cigartuples)
+        10
     """
 
     # add up reference-consuming blocks
@@ -40,14 +43,16 @@ def reference_offset(cigartuples: CigarTuples) -> int:
 def reference_block(cigartuples: CigarTuples, reference_start: int = 0) -> Tuple[int, int]:
     """Returns a tuple of the reference (start, end) positions of the aligned segment
 
-    POS  01234567890  12345
-    REF     AAAAGACC--CCC
-    QRY     AAAA-ACCGGCCC
-    CGS  HHHMMMMDMMMIIMMMHHHH
-    CGT  3H 4M 1D3M 2I 3M 4H
+    Example::
 
-    >>>> reference_block(cigartuples, reference_start=3)
-    (3, 13)
+        POS  01234567890  12345
+        REF     AAAAGACC--CCC
+        QRY     AAAA-ACCGGCCC
+        CGS  HHHMMMMDMMMIIMMMHHHH
+        CGT  3H 4M 1D3M 2I 3M 4H
+
+        reference_block(cigartuples, reference_start=3)
+        (3, 13)
     """
 
     offset = reference_offset(cigartuples)
@@ -57,13 +62,15 @@ def reference_block(cigartuples: CigarTuples, reference_start: int = 0) -> Tuple
 def query_offset(cigartuples: CigarTuples) -> int:
     """Calculate the length of the query mapping block based on cigartuples.
 
-    REF     AAAAGACC--CCC
-    QRY     AAAA-ACCGGCCC
-    CGS  HHHMMMMDMMMIIMMMHHHH
-    CGT  3H 4M 1D3M 2I 3M 4H
+    Example::
 
-    >>>> query_offset(cigartuples)
-    11
+        REF     AAAAGACC--CCC
+        QRY     AAAA-ACCGGCCC
+        CGS  HHHMMMMDMMMIIMMMHHHH
+        CGT  3H 4M 1D3M 2I 3M 4H
+
+        query_offset(cigartuples)
+        11
     """
 
     consumes_query_offset = set(CONSUMES_QUERY)
@@ -83,29 +90,33 @@ def query_offset(cigartuples: CigarTuples) -> int:
 def query_start(cigartuples: CigarTuples) -> int:
     """Return the start position on the query of this alignment.
 
-    REF     AAAAGACC--CCC
-    QRY     AAAA-ACCGGCCC
-    CGS  HHHMMMMDMMMIIMMMHHHH
-    CGT  3H 4M 1D3M 2I 3M 4H
+    Example::
 
-    >>>> query_start(cigartuples)
-    3
+        REF     AAAAGACC--CCC
+        QRY     AAAA-ACCGGCCC
+        CGS  HHHMMMMDMMMIIMMMHHHH
+        CGT  3H 4M 1D3M 2I 3M 4H
+
+        query_start(cigartuples)
+        3
     """
-    
+
     return left_clipping(cigartuples)
 
 
 def query_block(cigartuples: CigarTuples) -> Tuple[int, int]:
     """Returns a tuple of the query (start, end) positions of the aligned segment
 
-    POS  01234567890  12345
-    REF     AAAAGACC--CCC
-    QRY     AAAA-ACCGGCCC
-    CGS  HHHMMMMDMMMIIMMMHHHH
-    CGT  3H 4M 1D3M 2I 3M 4H
+    Example::
 
-    >>>> query_block(cigartuples)
-    (3, 12)
+        POS  01234567890  12345
+        REF     AAAAGACC--CCC
+        QRY     AAAA-ACCGGCCC
+        CGS  HHHMMMMDMMMIIMMMHHHH
+        CGT  3H 4M 1D3M 2I 3M 4H
+
+        query_block(cigartuples)
+        (3, 12)
     """
 
     # check clipping
@@ -121,72 +132,78 @@ def block_overlap_length(block_a: Tuple[int, int], block_b: Tuple[int, int]) -> 
     """Given two (start,stop) tuples, return their overlap.
     negative values indicate distance to overlap.
 
-    POS0  000000000011111111112222222222
-    POS1  012345678901234567890123456789
+    Examples::
 
-    BLKA      ----------
-    BLKB            ----------
+        POS0  000000000011111111112222222222
+        POS1  012345678901234567890123456789
 
-    >>> block_overlap_length((4, 13), (10, 19))
-    4
+        BLKA      ----------
+        BLKB            ----------
 
-    POS0  000000000011111111112222222222
-    POS1  012345678901234567890123456789
+        block_overlap_length((4, 13), (10, 19))
+        4
 
-    BLKA      -----
-    BLKB                  ----------
+        POS0  000000000011111111112222222222
+        POS1  012345678901234567890123456789
 
-    >>> block_overlap_length((4, 8), (16, 25))
-    -7
+        BLKA      -----
+        BLKB                  ----------
+
+        block_overlap_length((4, 8), (16, 25))
+        -7
     """
 
     return min(block_a[1], block_b[1]) - max(block_a[0], block_b[0])
 
 
 def reference_mapping_blocks(
-    cigartuples: CigarTuples, 
-    reference_start: int = 0, 
+    cigartuples: CigarTuples,
+    reference_start: int = 0,
     deletion_split: int = 10
 ) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of mapped sites split by deletions.
-    
-    POS0  000000000011111111112222222222
-    POS1  012345678901234567890123456789
 
-    CGS      MMMMMMMDDDMMMMDDDDDDMMMM
-    
-    >> reference_mapping_blocks(cigartuples, reference_start=3, deletion_split=5)
-    (3, 16)
-    (22, 26)
+    Example::
+
+        POS0  000000000011111111112222222222
+        POS1  012345678901234567890123456789
+
+        CGS      MMMMMMMDDDMMMMDDDDDDMMMM
+
+        reference_mapping_blocks(cigartuples, reference_start=3, deletion_split=5)
+        (3, 16)
+        (22, 26)
     """
-    
+
     del_ops = {BAM_CDEL, BAM_CREF_SKIP}
-    
+
     left, right = reference_start, reference_start
     for op, sz in cigartuples:
         if (op in del_ops) and (sz >= deletion_split):
             yield (left, right)
             left = right + sz
         right += sz * (op in CONSUMES_REFERENCE)
-        
+
     yield left, right
 
 
 def reference_deletion_blocks(
-    cigartuples: CigarTuples, 
-    reference_start: int = 0, 
+    cigartuples: CigarTuples,
+    reference_start: int = 0,
     min_size: int = 1
 ) -> Iterator[Tuple[int, int]]:
     """Yield (reference_start, reference_stop) blocks of deletions larger than minimum size
 
-    POS0  000000000011111111112222222222
-    POS1  012345678901234567890123456789
+    Example::
 
-    CGS      MMMMDDDDDDMMMMDDDDDDMMMM
+        POS0  000000000011111111112222222222
+        POS1  012345678901234567890123456789
 
-    >>> reference_deletion_blocks(cigartuples, reference_start=3)
-    (7, 12)
-    (17, 22)
+        CGS      MMMMDDDDDDMMMMDDDDDDMMMM
+
+        reference_deletion_blocks(cigartuples, reference_start=3)
+        (7, 12)
+        (17, 22)
     """
 
     del_ops = {BAM_CDEL, BAM_CREF_SKIP}

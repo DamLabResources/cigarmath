@@ -5,32 +5,19 @@ __copyright__ = """Copyright (C) 2022-present
     All rights reserved"""
 __author__ = "Will Dampier, PhD"
 
-from cigarmath.defn import (
-    BAM_CSOFT_CLIP,
-    BAM_CHARD_CLIP,
-    NTS,
-    BAM_CDEL,
-    BAM_CREF_SKIP,
-    CIGAR_HDRS,
-    CIGAR2BAM,
-    CONSUMES_REFERENCE,
-    CONSUMES_QUERY,
-)
-
-
-
-
 
 def simplify_blocks(cigartuples, collapse=True):
     """Replace extended cigars (= and X) with M.
 
-    POS  0123456789012345
-    REF     AAAAGACCCCC
-    QRY     AAAAACCGGCC
-    CGS     ====xx=xx==
+    Example::
 
-    >>>> simplify_blocks(cigartuples)
-    [(0, 11)]
+        POS  0123456789012345
+        REF     AAAAGACCCCC
+        QRY     AAAAACCGGCC
+        CGS     ====xx=xx==
+
+        simplify_blocks(cigartuples)
+        [(0, 11)]
     """
 
     if collapse:

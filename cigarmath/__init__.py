@@ -1,15 +1,15 @@
 """Top-level package for Cigar Math."""
 
+import importlib.metadata
+import importlib.util
+
 __author__ = """Will Dampier"""
 __email__ = "wnd22@drexel.edu"
-__version__ = "0.1.0"
-
 
 from .clipping import left_clipping
 from .clipping import right_clipping
 from .clipping import declip
 from .clipping import is_hard_clipped
-from .clipping import left_clipping
 from .clipping import softclipify
 
 
@@ -19,7 +19,6 @@ from .block import query_start
 from .block import query_offset
 from .block import query_block
 from .block import block_overlap_length
-from .block import reference_offset
 from .block import reference_mapping_blocks
 from .block import reference_deletion_blocks
 
@@ -35,7 +34,6 @@ from .conversions import segments_to_binary
 from .conversions import cigartuples2pairs
 
 from .conversions import msa2cigartuples
-from .conversions import softclipify
 
 from .cigarmath import collapse_adjacent_blocks
 
@@ -58,3 +56,56 @@ from .rearrangement import format_read_rearrangement_summary
 from .rearrangement import rearrangement_segment_stream
 from .rearrangement import reference_lengths_from_pysam_header
 from .rearrangement import RearrangementEvent
+
+
+def _read_runtime_version() -> str:
+    try:
+        return importlib.metadata.version("cigarmath")
+    except importlib.metadata.PackageNotFoundError:
+        if importlib.util.find_spec("cigarmath") is not None:
+            return "0.0.0+uninstalled"
+        raise
+
+
+__version__ = _read_runtime_version()
+
+__all__ = [
+    "left_clipping",
+    "right_clipping",
+    "declip",
+    "is_hard_clipped",
+    "softclipify",
+    "reference_offset",
+    "reference_block",
+    "query_start",
+    "query_offset",
+    "query_block",
+    "block_overlap_length",
+    "reference_mapping_blocks",
+    "reference_deletion_blocks",
+    "inferred_query_sequence_length",
+    "inferred_reference_length",
+    "cigarstr2tup",
+    "cigartup2str",
+    "io",
+    "segments_to_binary",
+    "cigartuples2pairs",
+    "msa2cigartuples",
+    "collapse_adjacent_blocks",
+    "reference2query",
+    "query2reference",
+    "cigar_iterator",
+    "cigar_iterator_reference_slice",
+    "liftover",
+    "iterator_attach",
+    "combine_multiple_alignments",
+    "combine_adjacent_alignments",
+    "trim_alignment",
+    "depth",
+    "infer_rearrangements",
+    "format_read_rearrangement_summary",
+    "rearrangement_segment_stream",
+    "reference_lengths_from_pysam_header",
+    "RearrangementEvent",
+    "__version__",
+]

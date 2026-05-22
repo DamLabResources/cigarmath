@@ -7,9 +7,10 @@ Welcome to Cigar Math's documentation!
 
    readme
    installation
+   cigar
    usage
    rearrangements
-   modules
+   api
    contributing
    authors
    history
